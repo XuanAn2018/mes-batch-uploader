@@ -58,15 +58,18 @@
   <script>
   // 🧩 Hàm tách package thành các tham số MES
   function parsePackage(mx) {
-  // 🆕 phiên bản regex cải tiến
   const pattern = /^M_[A-Z0-9-]+_\d+_([A-Z]+\d+)([A-Z]{3})(\d{3})_(\d{2,3})_(\d{2,3})$/;
   const m = mx.match(pattern);
   if (!m) throw new Error("❌ Package không đúng định dạng MES!");
+  
   const stylecode = m[1];
   const stylesize = m[2];
   const stylecolorserial = m[3];
+  
+  // ✅ Ép 3 chữ số luôn
   const revno = m[4].padStart(3, "0");
   const oprevno = m[5].padStart(3, "0");
+  
   return { stylecode, stylesize, stylecolorserial, revno, oprevno };
 }
 
