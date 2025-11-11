@@ -4,49 +4,40 @@
   <meta charset="utf-8">
   <title>MES Batch Sender 🚀</title>
   <style>
-    body {
-      font-family: "Segoe UI", Calibri, sans-serif;
-      background: #f7f9fc;
-      margin: 0; padding: 0;
-    }
+    body { font-family: Calibri, sans-serif; background:#f7f9fc; margin:0; padding:0; }
     .container {
       max-width: 900px; margin: 30px auto; background: white;
-      padding: 20px 30px; border-radius: 12px; box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      padding: 25px 30px; border-radius: 14px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
     }
-    h1 { text-align: center; color: #0057b7; }
-    label { font-weight: 600; display: block; margin-top: 10px; }
+    h1 { text-align:center; color:#0057b7; }
+    label { font-weight:600; display:block; margin-top:10px; }
     input, textarea, button {
-      width: 100%; margin: 6px 0; padding: 10px;
-      border-radius: 6px; border: 1px solid #ccc; font-size: 15px;
+      width:100%; margin:6px 0; padding:10px; border-radius:6px;
+      border:1px solid #ccc; font-size:15px;
     }
-    textarea { resize: vertical; }
+    textarea { resize:vertical; }
     button {
-      background: #0057b7; color: white; border: none; font-weight: bold;
-      cursor: pointer; transition: 0.3s;
+      background:#0057b7; color:white; border:none; font-weight:bold;
+      cursor:pointer; transition:0.3s;
     }
-    button:hover { background: #0072ff; }
-    #progress {
-      width: 100%; background: #e5e5e5; border-radius: 5px;
-      margin-top: 10px; height: 14px; overflow: hidden;
-    }
-    #bar {
-      height: 14px; background: linear-gradient(90deg,#00c851,#007e33);
-      width: 0%;
-    }
+    button:hover { background:#0072ff; }
+    #progress { width:100%; background:#e5e5e5; border-radius:5px; margin-top:10px; height:14px; }
+    #bar { height:14px; background:linear-gradient(90deg,#00c851,#007e33); width:0%; transition:width 0.3s; }
     pre {
-      background: #f0f0f0; padding: 10px; border-radius: 8px;
-      max-height: 400px; overflow-y: auto;
-      font-size: 13px; white-space: pre-wrap;
+      background:#f0f0f0; padding:10px; border-radius:8px;
+      max-height:400px; overflow-y:auto; font-size:13px;
+      white-space:pre-wrap;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🚀 MES Batch Sender</h1>
-    <p>Nhập thông tin <strong>Package</strong> và danh sách công đoạn - máy (MCID) cần gửi lên hệ thống MES.</p>
+    <p>Nhập <strong>package</strong> (ví dụ: <code>M_LSV-0007_1_LSV0001LRG002001_01_01</code>) và danh sách <strong>opserial, mcid[, processtype]</strong> để gửi hàng loạt.</p>
 
     <label>🔹 Package:</label>
-    <input id="pkg" placeholder="VD: M_LSV-0007_1_LSV0001LRG002001_01_01">
+    <input id="pkg" placeholder="M_LSV-0007_1_LSV0001LRG002001_01_01">
 
     <label>🔹 Danh sách (mỗi dòng: opserial,mcid[,processtype])</label>
     <textarea id="list" rows="8" placeholder="1,M10002390
@@ -65,11 +56,16 @@
   </div>
 
   <script>
+  // 🧩 Hàm tách package thành các tham số MES
   function parsePackage(mx) {
-    const m = mx.match(/^M_[A-Z0-9-]+_\d+_([A-Z]+\d+)([A-Z]{3})(\d{3})_(\d{2})_(\d{2})$/);
-    if (!m) throw new Error("Sai định dạng package");
-    const stylecode = m[1], stylesize = m[2], stylecolorserial = m[3];
-    const revno = m[4].padStart(3,"0"), oprevno = revno;
+    const pattern = /^M_[A-Z0-9-]+_\d+_([A-Z]+\d+)([A-Z]{3})(\d{3})_(\d{2})_(\d{2})$/;
+    const m = mx.match(pattern);
+    if (!m) throw new Error("❌ Package không đúng định dạng MES!");
+    const stylecode = m[1];
+    const stylesize = m[2];
+    const stylecolorserial = m[3];
+    const revno = m[4].padStart(3, "0");
+    const oprevno = revno;
     return { stylecode, stylesize, stylecolorserial, revno, oprevno };
   }
 
@@ -83,40 +79,57 @@
     let done = 0;
     const results = [];
 
-    log.textContent = "⏳ Bắt đầu gửi...\n";
-    const base = parsePackage(pkg);
+    if (!pkg) return alert("❗ Vui lòng nhập package!");
+    if (!lines.length) return alert("❗ Vui lòng nhập danh sách công đoạn / máy!");
+
+    let base;
+    try {
+      base = parsePackage(pkg);
+    } catch (err) {
+      alert(err.message);
+      return;
+    }
+
+    log.textContent = `⏳ Bắt đầu gửi ${total} dòng...\n`;
 
     for (const line of lines) {
       const [opserial, mcid, processtype] = line.split(",").map(x=>x.trim());
-      if (!opserial || !mcid) continue;
+      if (!opserial || !mcid) {
+        log.textContent += `⚠️ Bỏ qua dòng không hợp lệ: "${line}"\n`;
+        continue;
+      }
 
-      const url = `${endpoint}?stylecode=${base.stylecode}&stylesize=${base.stylesize}&stylecolorserial=${base.stylecolorserial}&revno=${base.revno}&oprevno=${base.oprevno}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}&mxpackage=${pkg}`;
+      // 🔗 Tạo URL endpoint hoàn chỉnh (KHÔNG có mxpackage)
+      const url = `${endpoint}?stylecode=${base.stylecode}&stylesize=${base.stylesize}&stylecolorserial=${base.stylecolorserial}&revno=${base.revno}&oprevno=${base.oprevno}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}`;
 
       try {
         const res = await fetch(url);
         const text = await res.text();
-        log.textContent += `✅ ${mcid} (op ${opserial}${processtype?','+processtype:''}) → ${res.status}\n`;
-        results.push({ opserial, mcid, processtype, status: res.status, body: text });
+        const ok = res.ok && /"IsSuccess":\s*true/.test(text);
+        const icon = ok ? "✅" : "❌";
+        log.textContent += `${icon} ${mcid} (op ${opserial}${processtype?','+processtype:''}) → ${res.status}\n`;
+        if (!ok) log.textContent += `   ↳ Nội dung: ${text.substring(0,150)}...\n`;
+        results.push({ opserial, mcid, processtype, status: res.status, success: ok, body: text });
       } catch (err) {
-        log.textContent += `❌ ${mcid} lỗi: ${err.message}\n`;
+        log.textContent += `❌ Lỗi gửi ${mcid}: ${err.message}\n`;
         results.push({ opserial, mcid, processtype, status: "ERROR", error: err.message });
       }
 
       done++;
       bar.style.width = `${(done/total)*100}%`;
-      await new Promise(r=>setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 200)); // tránh bị rate limit
     }
 
     log.textContent += "\n🎯 Hoàn tất gửi toàn bộ.\n";
     window._batchResults = results;
   };
 
-  // Xuất CSV
+  // 💾 Xuất kết quả CSV
   document.getElementById("export").onclick = () => {
     const data = window._batchResults || [];
     if (!data.length) return alert("Chưa có dữ liệu để xuất!");
-    const header = "opserial,mcid,processtype,status\n";
-    const rows = data.map(r=>`${r.opserial},${r.mcid},${r.processtype||''},${r.status}`);
+    const header = "opserial,mcid,processtype,status,success\n";
+    const rows = data.map(r=>`${r.opserial},${r.mcid},${r.processtype||''},${r.status},${r.success}`);
     const blob = new Blob([header + rows.join("\n")], {type:'text/csv'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -124,5 +137,4 @@
   };
   </script>
 </body>
-
 </html>
