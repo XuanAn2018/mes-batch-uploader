@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>MES Batch Sender 🚀</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Calibri, sans-serif;
+      background: #f7f9fc;
+      margin: 0; padding: 0;
+    }
+    .container {
+      max-width: 900px; margin: 30px auto; background: white;
+      padding: 20px 30px; border-radius: 12px; box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+    h1 { text-align: center; color: #0057b7; }
+    label { font-weight: 600; display: block; margin-top: 10px; }
+    input, textarea, button {
+      width: 100%; margin: 6px 0; padding: 10px;
+      border-radius: 6px; border: 1px solid #ccc; font-size: 15px;
+    }
+    textarea { resize: vertical; }
+    button {
+      background: #0057b7; color: white; border: none; font-weight: bold;
+      cursor: pointer; transition: 0.3s;
+    }
+    button:hover { background: #0072ff; }
+    #progress {
+      width: 100%; background: #e5e5e5; border-radius: 5px;
+      margin-top: 10px; height: 14px; overflow: hidden;
+    }
+    #bar {
+      height: 14px; background: linear-gradient(90deg,#00c851,#007e33);
+      width: 0%;
+    }
+    pre {
+      background: #f0f0f0; padding: 10px; border-radius: 8px;
+      max-height: 400px; overflow-y: auto;
+      font-size: 13px; white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 MES Batch Sender</h1>
+    <p>Nhập thông tin <strong>Package</strong> và danh sách công đoạn - máy (MCID) cần gửi lên hệ thống MES.</p>
+
+    <label>🔹 Package:</label>
+    <input id="pkg" placeholder="VD: M_LSV-0007_1_LSV0001LRG002001_01_01">
+
+    <label>🔹 Danh sách (mỗi dòng: opserial,mcid[,processtype])</label>
+    <textarea id="list" rows="8" placeholder="1,M10002390
+2,M10002391,FA
+3,M10002396,QA"></textarea>
+
+    <label>🔹 Endpoint:</label>
+    <input id="endpoint" value="https://mes-gans-may-proxy.chiscoong-cloudflare-com.workers.dev/">
+
+    <button id="run">▶️ Gửi hàng loạt</button>
+    <div id="progress"><div id="bar"></div></div>
+
+    <h3>📋 Log tiến trình:</h3>
+    <pre id="log">Chưa có hoạt động nào...</pre>
+    <button id="export" style="background:#28a745">💾 Xuất kết quả CSV</button>
+  </div>
+
+  <script>
+  function parsePackage(mx) {
+    const m = mx.match(/^M_[A-Z0-9-]+_\d+_([A-Z]+\d+)([A-Z]{3})(\d{3})_(\d{2})_(\d{2})$/);
+    if (!m) throw new Error("Sai định dạng package");
+    const stylecode = m[1], stylesize = m[2], stylecolorserial = m[3];
+    const revno = m[4].padStart(3,"0"), oprevno = revno;
+    return { stylecode, stylesize, stylecolorserial, revno, oprevno };
+  }
+
+  document.getElementById("run").onclick = async () => {
+    const pkg = document.getElementById("pkg").value.trim();
+    const lines = document.getElementById("list").value.split("\n").map(x=>x.trim()).filter(Boolean);
+    const endpoint = document.getElementById("endpoint").value.trim();
+    const log = document.getElementById("log");
+    const bar = document.getElementById("bar");
+    const total = lines.length;
+    let done = 0;
+    const results = [];
+
+    log.textContent = "⏳ Bắt đầu gửi...\n";
+    const base = parsePackage(pkg);
+
+    for (const line of lines) {
+      const [opserial, mcid, processtype] = line.split(",").map(x=>x.trim());
+      if (!opserial || !mcid) continue;
+
+      const url = `${endpoint}?stylecode=${base.stylecode}&stylesize=${base.stylesize}&stylecolorserial=${base.stylecolorserial}&revno=${base.revno}&oprevno=${base.oprevno}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}&mxpackage=${pkg}`;
+
+      try {
+        const res = await fetch(url);
+        const text = await res.text();
+        log.textContent += `✅ ${mcid} (op ${opserial}${processtype?','+processtype:''}) → ${res.status}\n`;
+        results.push({ opserial, mcid, processtype, status: res.status, body: text });
+      } catch (err) {
+        log.textContent += `❌ ${mcid} lỗi: ${err.message}\n`;
+        results.push({ opserial, mcid, processtype, status: "ERROR", error: err.message });
+      }
+
+      done++;
+      bar.style.width = `${(done/total)*100}%`;
+      await new Promise(r=>setTimeout(r, 200));
+    }
+
+    log.textContent += "\n🎯 Hoàn tất gửi toàn bộ.\n";
+    window._batchResults = results;
+  };
+
+  // Xuất CSV
+  document.getElementById("export").onclick = () => {
+    const data = window._batchResults || [];
+    if (!data.length) return alert("Chưa có dữ liệu để xuất!");
+    const header = "opserial,mcid,processtype,status\n";
+    const rows = data.map(r=>`${r.opserial},${r.mcid},${r.processtype||''},${r.status}`);
+    const blob = new Blob([header + rows.join("\n")], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = "mes_batch_result.csv"; a.click();
+  };
+  </script>
+</body>
+</html>
