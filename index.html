@@ -59,7 +59,7 @@
   // 🧩 Hàm tách package thành các tham số MES
   function parsePackage(mx) {
   // 🆕 phiên bản regex cải tiến
-  const pattern = /^M_[^_]+_\d+_([A-Z]+\d+)([A-Z]{2,4})(\d{2,4})_(\d{2,3})_(\d{2,3})$/;
+  const pattern = /^M_[A-Z0-9-]+_\d+_([A-Z]+\d+)([A-Z]{3})(\d{3})_(\d{2,3})_(\d{2,3})$/;
   const m = mx.match(pattern);
   if (!m) throw new Error("❌ Package không đúng định dạng MES!");
   const stylecode = m[1];
