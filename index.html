@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title>MES Batch Sender 🚀 (mxpackage mode)</title>
+  <title>MES Batch Sender ⚡ Parallel + Auto-Retry</title>
   <style>
     body { font-family: Calibri, sans-serif; background:#f7f9fc; margin:0; padding:0; }
     .container {
@@ -33,10 +33,8 @@
 </head>
 <body>
   <div class="container">
-    <h1>🚀 MES Batch Sender (mxpackage mode)</h1>
-    <p>Trang web này gửi hàng loạt yêu cầu đến hệ thống MES thông qua endpoint:</p>
-    <code>https://mes-system.chiscoong-cloudflare-com.workers.dev/</code>
-
+    <h1>⚡ MES Batch Sender (Parallel + Auto-Retry)</h1>
+    <p>Gửi hàng loạt yêu cầu MES song song với cơ chế tự retry khi lỗi.</p>
     <label>🔹 Package (mxpackage):</label>
     <input id="pkg" placeholder="M_HAR-0207_1_HAR0294RGL001001_01_02">
 
@@ -48,6 +46,9 @@
     <label>🔹 Endpoint:</label>
     <input id="endpoint" value="https://mes-system.chiscoong-cloudflare-com.workers.dev/">
 
+    <label>🔹 Số request song song tối đa:</label>
+    <input id="threads" type="number" min="1" max="20" value="10">
+
     <button id="run">▶️ Gửi hàng loạt</button>
     <div id="progress"><div id="bar"></div></div>
 
@@ -57,10 +58,32 @@
   </div>
 
   <script>
+  async function sendRequest({endpoint, pkg, opserial, mcid, processtype, attempt = 1}) {
+    const url = `${endpoint}?mxpackage=${encodeURIComponent(pkg)}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}`;
+    try {
+      const res = await fetch(url);
+      const text = await res.text();
+      const ok = res.ok && /"IsSuccess":\s*true/.test(text);
+      return { ok, status: res.status, body: text };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  async function sendWithRetry(task, retries = 3, delay = 1000) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      const res = await sendRequest({ ...task, attempt });
+      if (res.ok) return { ...res, attempt };
+      if (attempt < retries) await new Promise(r => setTimeout(r, delay));
+    }
+    return { ok: false, attempt: retries };
+  }
+
   document.getElementById("run").onclick = async () => {
     const pkg = document.getElementById("pkg").value.trim();
     const lines = document.getElementById("list").value.split("\n").map(x=>x.trim()).filter(Boolean);
     const endpoint = document.getElementById("endpoint").value.trim();
+    const threads = parseInt(document.getElementById("threads").value) || 10;
     const log = document.getElementById("log");
     const bar = document.getElementById("bar");
     const total = lines.length;
@@ -70,35 +93,39 @@
     if (!pkg) return alert("❗ Vui lòng nhập package (mxpackage)!");
     if (!lines.length) return alert("❗ Vui lòng nhập danh sách công đoạn / máy!");
 
-    log.textContent = `⏳ Bắt đầu gửi ${total} dòng...\n`;
+    log.textContent = `⚡ Bắt đầu gửi ${total} dòng (song song ${threads} luồng)...\n`;
 
-    for (const line of lines) {
+    const queue = lines.map((line, idx) => {
       const [opserial, mcid, processtype] = line.split(",").map(x=>x.trim());
-      if (!opserial || !mcid) {
-        log.textContent += `⚠️ Bỏ qua dòng không hợp lệ: "${line}"\n`;
-        continue;
+      return { opserial, mcid, processtype, index: idx + 1 };
+    });
+
+    async function worker() {
+      while (queue.length > 0) {
+        const task = queue.shift();
+        if (!task.opserial || !task.mcid) {
+          log.textContent += `⚠️ Bỏ qua dòng không hợp lệ: "${task}"\n`;
+          continue;
+        }
+
+        log.textContent += `🚀 [${task.index}] Gửi ${task.mcid} (op ${task.opserial}${task.processtype?','+task.processtype:''})...\n`;
+
+        const res = await sendWithRetry({ endpoint, pkg, ...task });
+        const icon = res.ok ? "✅" : "❌";
+        const retryNote = res.attempt > 1 ? ` 🔁(${res.attempt} lần)` : "";
+        log.textContent += `${icon} [${task.index}] ${task.mcid} → ${res.status || 'error'}${retryNote}\n`;
+        if (!res.ok && res.body) log.textContent += `   ↳ Nội dung: ${res.body.substring(0,100)}...\n`;
+
+        results.push({ ...task, status: res.status || "ERROR", success: res.ok, retries: res.attempt });
+
+        done++;
+        bar.style.width = `${(done/total)*100}%`;
       }
-
-      // 🔗 Endpoint dạng mới chỉ gồm mxpackage, opserial, mcid, processtype
-      const url = `${endpoint}?mxpackage=${encodeURIComponent(pkg)}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}`;
-
-      try {
-        const res = await fetch(url);
-        const text = await res.text();
-        const ok = res.ok && /"IsSuccess":\s*true/.test(text);
-        const icon = ok ? "✅" : "❌";
-        log.textContent += `${icon} ${mcid} (op ${opserial}${processtype?','+processtype:''}) → ${res.status}\n`;
-        if (!ok) log.textContent += `   ↳ Nội dung: ${text.substring(0,150)}...\n`;
-        results.push({ opserial, mcid, processtype, status: res.status, success: ok, body: text });
-      } catch (err) {
-        log.textContent += `❌ Lỗi gửi ${mcid}: ${err.message}\n`;
-        results.push({ opserial, mcid, processtype, status: "ERROR", error: err.message });
-      }
-
-      done++;
-      bar.style.width = `${(done/total)*100}%`;
-      await new Promise(r => setTimeout(r, 200));
     }
+
+    // 🔄 Chạy song song theo số luồng
+    const workers = Array.from({ length: threads }, () => worker());
+    await Promise.all(workers);
 
     log.textContent += "\n🎯 Hoàn tất gửi toàn bộ.\n";
     window._batchResults = results;
@@ -108,8 +135,8 @@
   document.getElementById("export").onclick = () => {
     const data = window._batchResults || [];
     if (!data.length) return alert("Chưa có dữ liệu để xuất!");
-    const header = "opserial,mcid,processtype,status,success\n";
-    const rows = data.map(r=>`${r.opserial},${r.mcid},${r.processtype||''},${r.status},${r.success}`);
+    const header = "index,opserial,mcid,processtype,status,success,retries\n";
+    const rows = data.map(r=>`${r.index},${r.opserial},${r.mcid},${r.processtype||''},${r.status},${r.success},${r.retries}`);
     const blob = new Blob([header + rows.join("\n")], {type:'text/csv'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
