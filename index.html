@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title>MES Batch Sender ⚡ Parallel + Auto-Retry</title>
+  <title>MES Batch Sender ⚡ Parallel + Retry + Stop/Pause</title>
   <style>
     body { font-family: Calibri, sans-serif; background:#f7f9fc; margin:0; padding:0; }
     .container {
@@ -29,12 +29,15 @@
       max-height:400px; overflow-y:auto; font-size:13px;
       white-space:pre-wrap;
     }
+    .btn-row { display:flex; gap:10px; margin-top:10px; }
+    .btn-row button { flex:1; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>⚡ MES Batch Sender (Parallel + Auto-Retry)</h1>
-    <p>Gửi hàng loạt yêu cầu MES song song với cơ chế tự retry khi lỗi.</p>
+    <h1>⚡ MES Batch Sender (Parallel + Retry + Pause)</h1>
+    <p>Gửi hàng loạt yêu cầu MES song song, có tự động retry và nút tạm dừng.</p>
+
     <label>🔹 Package (mxpackage):</label>
     <input id="pkg" placeholder="M_HAR-0207_1_HAR0294RGL001001_01_02">
 
@@ -46,10 +49,15 @@
     <label>🔹 Endpoint:</label>
     <input id="endpoint" value="https://mes-system.chiscoong-cloudflare-com.workers.dev/">
 
-    <label>🔹 Số request song song tối đa:</label>
+    <label>🔹 Số luồng song song:</label>
     <input id="threads" type="number" min="1" max="20" value="10">
 
-    <button id="run">▶️ Gửi hàng loạt</button>
+    <div class="btn-row">
+      <button id="run">▶️ Gửi hàng loạt</button>
+      <button id="pause" style="background:#ffc107">⏸️ Tạm dừng</button>
+      <button id="stop" style="background:#dc3545">⏹️ Dừng</button>
+    </div>
+
     <div id="progress"><div id="bar"></div></div>
 
     <h3>📋 Log tiến trình:</h3>
@@ -58,7 +66,11 @@
   </div>
 
   <script>
-  async function sendRequest({endpoint, pkg, opserial, mcid, processtype, attempt = 1}) {
+  // ⚙️ Trạng thái toàn cục
+  let isPaused = false;
+  let isStopped = false;
+
+  async function sendRequest({endpoint, pkg, opserial, mcid, processtype}) {
     const url = `${endpoint}?mxpackage=${encodeURIComponent(pkg)}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}`;
     try {
       const res = await fetch(url);
@@ -72,14 +84,31 @@
 
   async function sendWithRetry(task, retries = 3, delay = 1000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
-      const res = await sendRequest({ ...task, attempt });
+      if (isStopped) return { ok: false, status: "STOPPED", attempt };
+      const res = await sendRequest(task);
       if (res.ok) return { ...res, attempt };
       if (attempt < retries) await new Promise(r => setTimeout(r, delay));
     }
     return { ok: false, attempt: retries };
   }
 
+  document.getElementById("pause").onclick = () => {
+    isPaused = !isPaused;
+    document.getElementById("pause").textContent = isPaused ? "▶️ Tiếp tục" : "⏸️ Tạm dừng";
+  };
+
+  document.getElementById("stop").onclick = () => {
+    if (!isStopped) {
+      isStopped = true;
+      document.getElementById("log").textContent += "\n⏹️ Đã dừng quá trình gửi.\n";
+    }
+  };
+
   document.getElementById("run").onclick = async () => {
+    isPaused = false;
+    isStopped = false;
+    document.getElementById("pause").textContent = "⏸️ Tạm dừng";
+
     const pkg = document.getElementById("pkg").value.trim();
     const lines = document.getElementById("list").value.split("\n").map(x=>x.trim()).filter(Boolean);
     const endpoint = document.getElementById("endpoint").value.trim();
@@ -90,10 +119,10 @@
     let done = 0;
     const results = [];
 
-    if (!pkg) return alert("❗ Vui lòng nhập package (mxpackage)!");
+    if (!pkg) return alert("❗ Vui lòng nhập package!");
     if (!lines.length) return alert("❗ Vui lòng nhập danh sách công đoạn / máy!");
 
-    log.textContent = `⚡ Bắt đầu gửi ${total} dòng (song song ${threads} luồng)...\n`;
+    log.textContent = `⚡ Gửi ${total} dòng (song song ${threads} luồng)...\n`;
 
     const queue = lines.map((line, idx) => {
       const [opserial, mcid, processtype] = line.split(",").map(x=>x.trim());
@@ -101,7 +130,12 @@
     });
 
     async function worker() {
-      while (queue.length > 0) {
+      while (queue.length > 0 && !isStopped) {
+        if (isPaused) {
+          await new Promise(r => setTimeout(r, 500)); // chờ khi tạm dừng
+          continue;
+        }
+
         const task = queue.shift();
         if (!task.opserial || !task.mcid) {
           log.textContent += `⚠️ Bỏ qua dòng không hợp lệ: "${task}"\n`;
@@ -111,10 +145,9 @@
         log.textContent += `🚀 [${task.index}] Gửi ${task.mcid} (op ${task.opserial}${task.processtype?','+task.processtype:''})...\n`;
 
         const res = await sendWithRetry({ endpoint, pkg, ...task });
-        const icon = res.ok ? "✅" : "❌";
+        const icon = res.ok ? "✅" : (res.status === "STOPPED" ? "⏹️" : "❌");
         const retryNote = res.attempt > 1 ? ` 🔁(${res.attempt} lần)` : "";
         log.textContent += `${icon} [${task.index}] ${task.mcid} → ${res.status || 'error'}${retryNote}\n`;
-        if (!res.ok && res.body) log.textContent += `   ↳ Nội dung: ${res.body.substring(0,100)}...\n`;
 
         results.push({ ...task, status: res.status || "ERROR", success: res.ok, retries: res.attempt });
 
@@ -123,15 +156,18 @@
       }
     }
 
-    // 🔄 Chạy song song theo số luồng
     const workers = Array.from({ length: threads }, () => worker());
     await Promise.all(workers);
 
-    log.textContent += "\n🎯 Hoàn tất gửi toàn bộ.\n";
+    if (isStopped) {
+      log.textContent += "\n⏹️ Quá trình đã dừng thủ công.\n";
+    } else {
+      log.textContent += "\n🎯 Hoàn tất toàn bộ.\n";
+    }
     window._batchResults = results;
   };
 
-  // 💾 Xuất kết quả CSV
+  // 💾 Xuất CSV
   document.getElementById("export").onclick = () => {
     const data = window._batchResults || [];
     if (!data.length) return alert("Chưa có dữ liệu để xuất!");
