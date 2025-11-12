@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title>MES Batch Sender ⚡ Parallel + Retry + Stop/Pause</title>
+  <title>MES Batch Sender ⚡ Parallel + Retry + Stop/Pause + Timer</title>
   <style>
     body { font-family: Calibri, sans-serif; background:#f7f9fc; margin:0; padding:0; }
     .container {
@@ -22,21 +22,33 @@
       cursor:pointer; transition:0.3s;
     }
     button:hover { background:#0072ff; }
+    button:disabled { background:#6c757d; cursor:not-allowed; }
     #progress { width:100%; background:#e5e5e5; border-radius:5px; margin-top:10px; height:14px; }
     #bar { height:14px; background:linear-gradient(90deg,#00c851,#007e33); width:0%; transition:width 0.3s; }
     pre {
       background:#f0f0f0; padding:10px; border-radius:8px;
-      max-height:400px; overflow-y:auto; font-size:13px;
-      white-space:pre-wrap;
+      max-height:400px; overflow-y:auto; font-size:12px;
+      white-space:pre-wrap; line-height:1.2;
+      font-family: 'Courier New', monospace;
     }
     .btn-row { display:flex; gap:10px; margin-top:10px; }
     .btn-row button { flex:1; }
+    .file-input-row { display:flex; gap:10px; align-items:center; }
+    .file-input-row input[type="file"] { flex:2; }
+    .file-input-row button { flex:1; }
+    .stats { 
+      background: #e8f4fd; 
+      padding: 10px; 
+      border-radius: 6px; 
+      margin: 10px 0;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>⚡ MES Batch Sender (Parallel + Retry + Pause)</h1>
-    <p>Gửi hàng loạt yêu cầu MES song song, có tự động retry và nút tạm dừng.</p>
+    <h1>⚡ MES Batch Sender (Parallel + Retry + Stop/Pause + Timer)</h1>
+    <p>Gửi hàng loạt yêu cầu MES song song, có retry, tạm dừng, và đo thời gian.</p>
 
     <label>🔹 Package (mxpackage):</label>
     <input id="pkg" placeholder="M_HAR-0207_1_HAR0294RGL001001_01_02">
@@ -46,138 +58,370 @@
 2,M10002391,FA
 3,M10002396,QA"></textarea>
 
+    <label>🔹 Import từ file CSV/TXT:</label>
+    <div class="file-input-row">
+      <input type="file" id="fileInput" accept=".csv,.txt,.xlsx">
+      <button id="importBtn" style="background:#6c757d">📁 Import File</button>
+    </div>
+
     <label>🔹 Endpoint:</label>
     <input id="endpoint" value="https://mes-system.chiscoong-cloudflare-com.workers.dev/">
 
     <label>🔹 Số luồng song song:</label>
     <input id="threads" type="number" min="1" max="20" value="10">
 
+    <label>🔹 Giới hạn request/giây:</label>
+    <input id="rateLimit" type="number" min="1" max="1000" value="50" placeholder="Số request tối đa mỗi giây">
+
     <div class="btn-row">
       <button id="run">▶️ Gửi hàng loạt</button>
-      <button id="pause" style="background:#ffc107">⏸️ Tạm dừng</button>
-      <button id="stop" style="background:#dc3545">⏹️ Dừng</button>
+      <button id="pause" style="background:#ffc107; display:none;">⏸️ Tạm dừng</button>
+      <button id="stop" style="background:#dc3545; display:none;">⏹️ Dừng</button>
     </div>
 
     <div id="progress"><div id="bar"></div></div>
 
+    <div id="stats" class="stats" style="display:none;">
+      📊 Thống kê: Đang xử lý...
+    </div>
+
     <h3>📋 Log tiến trình:</h3>
     <pre id="log">Chưa có hoạt động nào...</pre>
-    <button id="export" style="background:#28a745">💾 Xuất kết quả CSV</button>
+    
+    <div class="btn-row">
+      <button id="export" style="background:#28a745">💾 Xuất kết quả CSV</button>
+      <button id="clearLog" style="background:#6c757d">🗑️ Xóa Log</button>
+    </div>
   </div>
 
   <script>
-  // ⚙️ Trạng thái toàn cục
   let isPaused = false;
   let isStopped = false;
+  let currentBatchStart = null;
 
+  // ⏱️ Helper format mm:ss
+  function formatTime(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60).toString().padStart(2, "0");
+    const s = (totalSec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
+  // 📊 Cập nhật thống kê
+  function updateStats(results, total, elapsedTime) {
+    const statsEl = document.getElementById("stats");
+    if (!results.length) {
+      statsEl.style.display = 'none';
+      return;
+    }
+    
+    const success = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success && r.status !== "STOPPED").length;
+    const stopped = results.filter(r => r.status === "STOPPED").length;
+    const pending = total - results.length;
+    
+    const avgRetries = results.length > 0 
+      ? (results.reduce((sum, r) => sum + (r.retries || 0), 0) / results.length).toFixed(2)
+      : "0.00";
+    
+    const avgDuration = results.length > 0
+      ? (results.reduce((sum, r) => sum + (parseFloat(r.duration) || 0), 0) / results.length).toFixed(2)
+      : "0.00";
+    
+    const currentRate = elapsedTime > 0 ? (results.length / (elapsedTime / 1000)).toFixed(2) : "0.00";
+    
+    statsEl.innerHTML = `
+      📊 Thống kê: 
+      Tổng: ${total} | 
+      Đã xử lý: ${results.length} | 
+      Thành công: <span style="color:green">${success}</span> | 
+      Thất bại: <span style="color:red">${failed}</span> | 
+      Đã dừng: ${stopped} | 
+      Chờ: ${pending} |
+      Retry TB: ${avgRetries} | 
+      Thời gian TB: ${avgDuration}s |
+      Tốc độ: ${currentRate} req/s
+    `;
+    statsEl.style.display = 'block';
+  }
+
+  // 🚨 Validation chi tiết
+  function validateInputs() {
+    const pkg = document.getElementById("pkg").value.trim();
+    const lines = document.getElementById("list").value.split("\n").map(x => x.trim()).filter(Boolean);
+    const endpoint = document.getElementById("endpoint").value.trim();
+    
+    if (!pkg) throw new Error("❗ Vui lòng nhập package!");
+    if (!lines.length) throw new Error("❗ Vui lòng nhập danh sách công đoạn / máy!");
+    if (!endpoint) throw new Error("❗ Vui lòng nhập endpoint!");
+    
+    // Validate từng dòng
+    const invalidLines = [];
+    lines.forEach((line, idx) => {
+      const parts = line.split(",").map(x => x.trim());
+      if (parts.length < 2 || !parts[0] || !parts[1]) {
+        invalidLines.push(`Dòng ${idx + 1}: "${line}"`);
+      }
+    });
+    
+    if (invalidLines.length > 0) {
+      throw new Error(`Dòng không hợp lệ:\n${invalidLines.join("\n")}`);
+    }
+    
+    return { pkg, lines, endpoint };
+  }
+
+  // 🔄 Rate Limiter class
+  class RateLimiter {
+    constructor(requestsPerSecond) {
+      this.delay = 1000 / requestsPerSecond;
+      this.lastRequest = 0;
+    }
+    
+    async wait() {
+      const now = Date.now();
+      const waitTime = this.lastRequest + this.delay - now;
+      if (waitTime > 0) {
+        await new Promise(r => setTimeout(r, waitTime));
+      }
+      this.lastRequest = Date.now();
+    }
+  }
+
+  // 📝 Append log với auto-scroll
+  function appendLog(message) {
+    const log = document.getElementById("log");
+    log.textContent += message + "\n";
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // ⚙️ Loading state management
+  function setLoadingState(loading) {
+    document.getElementById("run").disabled = loading;
+    document.getElementById("export").disabled = loading;
+    document.getElementById("importBtn").disabled = loading;
+    document.getElementById("pause").style.display = loading ? "block" : "none";
+    document.getElementById("stop").style.display = loading ? "block" : "none";
+    
+    if (!loading) {
+      isPaused = false;
+      isStopped = false;
+      document.getElementById("pause").textContent = "⏸️ Tạm dừng";
+    }
+  }
+
+  // 💾 State management
+  function saveState(state) {
+    localStorage.setItem('mesBatchState', JSON.stringify({
+      ...state,
+      timestamp: Date.now()
+    }));
+  }
+
+  function loadState() {
+    const saved = localStorage.getItem('mesBatchState');
+    return saved ? JSON.parse(saved) : null;
+  }
+
+  function clearState() {
+    localStorage.removeItem('mesBatchState');
+  }
+
+  // 📧 Gửi request
   async function sendRequest({endpoint, pkg, opserial, mcid, processtype}) {
     const url = `${endpoint}?mxpackage=${encodeURIComponent(pkg)}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}`;
+    const start = Date.now();
     try {
       const res = await fetch(url);
       const text = await res.text();
       const ok = res.ok && /"IsSuccess":\s*true/.test(text);
-      return { ok, status: res.status, body: text };
+      const duration = ((Date.now() - start) / 1000).toFixed(2);
+      return { ok, status: res.status, body: text, duration };
     } catch (err) {
-      return { ok: false, error: err.message };
+      const duration = ((Date.now() - start) / 1000).toFixed(2);
+      return { ok: false, error: err.message, duration };
     }
   }
 
+  // 🔁 Retry logic
   async function sendWithRetry(task, retries = 3, delay = 1000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
-      if (isStopped) return { ok: false, status: "STOPPED", attempt };
+      if (isStopped) return { ok: false, status: "STOPPED", attempt, duration: 0 };
       const res = await sendRequest(task);
       if (res.ok) return { ...res, attempt };
-      if (attempt < retries) await new Promise(r => setTimeout(r, delay));
+      if (attempt < retries) {
+        appendLog(`   🔁 [${task.index}] Retry ${attempt}/${retries}...`);
+        await new Promise(r => setTimeout(r, delay));
+      }
     }
-    return { ok: false, attempt: retries };
+    return { ok: false, attempt: retries, duration: 0 };
   }
 
+  // 📁 File import handler
+  document.getElementById("importBtn").onclick = () => {
+    document.getElementById("fileInput").click();
+  };
+
+  document.getElementById("fileInput").onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      document.getElementById("list").value = event.target.result;
+      appendLog(`📁 Đã import file: ${file.name} (${file.size} bytes)`);
+    };
+    reader.onerror = () => {
+      appendLog("❌ Lỗi đọc file!");
+    };
+    reader.readAsText(file);
+    
+    // Reset file input
+    e.target.value = '';
+  };
+
+  // ⏯️ Pause/Resume handler
   document.getElementById("pause").onclick = () => {
     isPaused = !isPaused;
     document.getElementById("pause").textContent = isPaused ? "▶️ Tiếp tục" : "⏸️ Tạm dừng";
+    appendLog(isPaused ? "⏸️ Đã tạm dừng" : "▶️ Đã tiếp tục");
   };
 
+  // ⏹️ Stop handler
   document.getElementById("stop").onclick = () => {
     if (!isStopped) {
       isStopped = true;
-      document.getElementById("log").textContent += "\n⏹️ Đã dừng quá trình gửi.\n";
+      appendLog("⏹️ Đang dừng quá trình gửi...");
     }
   };
 
-  document.getElementById("run").onclick = async () => {
-    isPaused = false;
-    isStopped = false;
-    document.getElementById("pause").textContent = "⏸️ Tạm dừng";
+  // 🧹 Clear log handler
+  document.getElementById("clearLog").onclick = () => {
+    document.getElementById("log").textContent = "Log đã được xóa...\n";
+  };
 
-    const pkg = document.getElementById("pkg").value.trim();
-    const lines = document.getElementById("list").value.split("\n").map(x=>x.trim()).filter(Boolean);
-    const endpoint = document.getElementById("endpoint").value.trim();
-    const threads = parseInt(document.getElementById("threads").value) || 10;
-    const log = document.getElementById("log");
-    const bar = document.getElementById("bar");
-    const total = lines.length;
-    let done = 0;
-    const results = [];
+  // 🚀 Main process
+  async function runBatchProcess() {
+    try {
+      setLoadingState(true);
+      const { pkg, lines, endpoint } = validateInputs();
+      
+      const threads = parseInt(document.getElementById("threads").value) || 10;
+      const rateLimit = parseInt(document.getElementById("rateLimit").value) || 50;
+      const log = document.getElementById("log");
+      const bar = document.getElementById("bar");
+      const total = lines.length;
+      let done = 0;
+      const results = [];
 
-    if (!pkg) return alert("❗ Vui lòng nhập package!");
-    if (!lines.length) return alert("❗ Vui lòng nhập danh sách công đoạn / máy!");
+      log.textContent = `⚡ Bắt đầu gửi ${total} dòng (song song ${threads} luồng, giới hạn ${rateLimit} req/giây)...\n`;
+      
+      currentBatchStart = Date.now();
+      const queue = lines.map((line, idx) => {
+        const [opserial, mcid, processtype] = line.split(",").map(x => x.trim());
+        return { opserial, mcid, processtype, index: idx + 1 };
+      });
 
-    log.textContent = `⚡ Gửi ${total} dòng (song song ${threads} luồng)...\n`;
+      const rateLimiter = new RateLimiter(rateLimit);
 
-    const queue = lines.map((line, idx) => {
-      const [opserial, mcid, processtype] = line.split(",").map(x=>x.trim());
-      return { opserial, mcid, processtype, index: idx + 1 };
-    });
+      async function worker() {
+        while (queue.length > 0 && !isStopped) {
+          if (isPaused) {
+            await new Promise(r => setTimeout(r, 500));
+            continue;
+          }
 
-    async function worker() {
-      while (queue.length > 0 && !isStopped) {
-        if (isPaused) {
-          await new Promise(r => setTimeout(r, 500)); // chờ khi tạm dừng
-          continue;
+          await rateLimiter.wait();
+          const task = queue.shift();
+          if (!task || !task.opserial || !task.mcid) {
+            appendLog(`⚠️ Bỏ qua dòng không hợp lệ: "${task}"`);
+            continue;
+          }
+
+          appendLog(`🚀 [${task.index}] Gửi ${task.mcid} (op ${task.opserial}${task.processtype ? ',' + task.processtype : ''})...`);
+
+          const res = await sendWithRetry({ endpoint, pkg, ...task });
+          const icon = res.ok ? "✅" : (res.status === "STOPPED" ? "⏹️" : "❌");
+          const retryNote = res.attempt > 1 ? ` 🔁(${res.attempt} lần)` : "";
+          const timeNote = res.duration ? ` (${res.duration}s)` : "";
+          appendLog(`${icon} [${task.index}] ${task.mcid} → ${res.status || 'error'}${retryNote}${timeNote}`);
+
+          results.push({
+            ...task,
+            status: res.status || "ERROR",
+            success: res.ok,
+            retries: res.attempt,
+            duration: res.duration
+          });
+
+          done++;
+          bar.style.width = `${(done/total)*100}%`;
+          
+          // Cập nhật thống kê
+          updateStats(results, total, Date.now() - currentBatchStart);
+          
+          // Lưu state
+          saveState({ results, total, done, queue });
         }
+      }
 
-        const task = queue.shift();
-        if (!task.opserial || !task.mcid) {
-          log.textContent += `⚠️ Bỏ qua dòng không hợp lệ: "${task}"\n`;
-          continue;
-        }
+      const workers = Array.from({ length: threads }, () => worker());
+      await Promise.all(workers);
 
-        log.textContent += `🚀 [${task.index}] Gửi ${task.mcid} (op ${task.opserial}${task.processtype?','+task.processtype:''})...\n`;
-
-        const res = await sendWithRetry({ endpoint, pkg, ...task });
-        const icon = res.ok ? "✅" : (res.status === "STOPPED" ? "⏹️" : "❌");
-        const retryNote = res.attempt > 1 ? ` 🔁(${res.attempt} lần)` : "";
-        log.textContent += `${icon} [${task.index}] ${task.mcid} → ${res.status || 'error'}${retryNote}\n`;
-
-        results.push({ ...task, status: res.status || "ERROR", success: res.ok, retries: res.attempt });
-
-        done++;
-        bar.style.width = `${(done/total)*100}%`;
+      const totalTime = Date.now() - currentBatchStart;
+      const avg = total / (totalTime / 1000);
+      
+      if (isStopped) {
+        appendLog(`\n⏹️ Đã dừng thủ công sau ${formatTime(totalTime}.`);
+        appendLog(`📊 Đã xử lý: ${done}/${total} requests`);
+      } else {
+        appendLog(`\n🎯 Hoàn tất toàn bộ trong ${formatTime(totalTime)} (${avg.toFixed(2)} req/s).`);
+      }
+      
+      window._batchResults = results;
+      clearState(); // Xóa state khi hoàn thành
+      
+    } catch (error) {
+      appendLog(`❌ Lỗi: ${error.message}`);
+      console.error('Batch process error:', error);
+    } finally {
+      setLoadingState(false);
+      // Cập nhật thống kê cuối cùng
+      if (window._batchResults) {
+        updateStats(window._batchResults, window._batchResults.length, Date.now() - currentBatchStart);
       }
     }
+  }
 
-    const workers = Array.from({ length: threads }, () => worker());
-    await Promise.all(workers);
+  // ▶️ Run handler
+  document.getElementById("run").onclick = runBatchProcess;
 
-    if (isStopped) {
-      log.textContent += "\n⏹️ Quá trình đã dừng thủ công.\n";
-    } else {
-      log.textContent += "\n🎯 Hoàn tất toàn bộ.\n";
-    }
-    window._batchResults = results;
-  };
-
-  // 💾 Xuất CSV
+  // 💾 Export handler
   document.getElementById("export").onclick = () => {
     const data = window._batchResults || [];
     if (!data.length) return alert("Chưa có dữ liệu để xuất!");
-    const header = "index,opserial,mcid,processtype,status,success,retries\n";
-    const rows = data.map(r=>`${r.index},${r.opserial},${r.mcid},${r.processtype||''},${r.status},${r.success},${r.retries}`);
-    const blob = new Blob([header + rows.join("\n")], {type:'text/csv'});
+    
+    const header = "index,opserial,mcid,processtype,status,success,retries,duration(s)\n";
+    const rows = data.map(r => `${r.index},${r.opserial},${r.mcid},${r.processtype||''},${r.status},${r.success},${r.retries},${r.duration}`);
+    const blob = new Blob(["\uFEFF" + header + rows.join("\n")], {type:'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = "mes_batch_result.csv"; a.click();
+    a.href = url; 
+    a.download = `mes_batch_result_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.csv`; 
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    appendLog(`💾 Đã xuất file: ${a.download}`);
   };
+
+  // 🔄 Khôi phục state khi load page (nếu có)
+  window.addEventListener('load', () => {
+    const savedState = loadState();
+    if (savedState && confirm('Tìm thấy phiên làm việc chưa hoàn thành. Bạn có muốn khôi phục?')) {
+      // Implement resume logic here if needed
+      appendLog("💡 Tìm thấy state cũ. Bạn có thể bắt đầu process mới.");
+    }
+  });
   </script>
 </body>
 </html>
