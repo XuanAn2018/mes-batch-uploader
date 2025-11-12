@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title>MES Batch Sender ⚡ Parallel + Retry + Stop/Pause + Timer</title>
+  <title>MES Batch Sender ⚡ </title>
   <style>
     body { font-family: Calibri, sans-serif; background:#f7f9fc; margin:0; padding:0; }
     .container {
@@ -43,6 +43,8 @@
       margin: 10px 0;
       font-weight: bold;
     }
+    .error { color: red; }
+    .success { color: green; }
   </style>
 </head>
 <body>
@@ -51,12 +53,14 @@
     <p>Gửi hàng loạt yêu cầu MES song song, có retry, tạm dừng, và đo thời gian.</p>
 
     <label>🔹 Package (mxpackage):</label>
-    <input id="pkg" placeholder="M_HAR-0207_1_HAR0294RGL001001_01_02">
+    <input id="pkg" placeholder="M_HAR-0207_1_HAR0294RGL001001_01_02" value="M_HAR-0207_1_HAR0294RGL001001_01_02">
 
     <label>🔹 Danh sách (mỗi dòng: opserial,mcid[,processtype])</label>
     <textarea id="list" rows="8" placeholder="1,M10002390
 2,M10002391,FA
-3,M10002396,QA"></textarea>
+3,M10002396,QA">1,M10002390
+2,M10002391,FA
+3,M10002396,QA</textarea>
 
     <label>🔹 Import từ file CSV/TXT:</label>
     <div class="file-input-row">
@@ -68,10 +72,10 @@
     <input id="endpoint" value="https://mes-system.chiscoong-cloudflare-com.workers.dev/">
 
     <label>🔹 Số luồng song song:</label>
-    <input id="threads" type="number" min="1" max="20" value="10">
+    <input id="threads" type="number" min="1" max="20" value="3">
 
     <label>🔹 Giới hạn request/giây:</label>
-    <input id="rateLimit" type="number" min="1" max="1000" value="50" placeholder="Số request tối đa mỗi giây">
+    <input id="rateLimit" type="number" min="1" max="1000" value="10" placeholder="Số request tối đa mỗi giây">
 
     <div class="btn-row">
       <button id="run">▶️ Gửi hàng loạt</button>
@@ -91,6 +95,7 @@
     <div class="btn-row">
       <button id="export" style="background:#28a745">💾 Xuất kết quả CSV</button>
       <button id="clearLog" style="background:#6c757d">🗑️ Xóa Log</button>
+      <button id="testConnection" style="background:#17a2b8">🔗 Test Kết nối</button>
     </div>
   </div>
 
@@ -155,6 +160,13 @@
     if (!lines.length) throw new Error("❗ Vui lòng nhập danh sách công đoạn / máy!");
     if (!endpoint) throw new Error("❗ Vui lòng nhập endpoint!");
     
+    // Validate endpoint URL
+    try {
+      new URL(endpoint);
+    } catch (e) {
+      throw new Error("❗ Endpoint không hợp lệ!");
+    }
+    
     // Validate từng dòng
     const invalidLines = [];
     lines.forEach((line, idx) => {
@@ -189,10 +201,20 @@
   }
 
   // 📝 Append log với auto-scroll
-  function appendLog(message) {
+  function appendLog(message, isError = false) {
     const log = document.getElementById("log");
-    log.textContent += message + "\n";
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `[${timestamp}] ${message}`;
+    
+    log.textContent += logEntry + "\n";
     log.scrollTop = log.scrollHeight;
+    
+    // Log ra console để debug
+    if (isError) {
+      console.error(message);
+    } else {
+      console.log(message);
+    }
   }
 
   // ⚙️ Loading state management
@@ -200,6 +222,7 @@
     document.getElementById("run").disabled = loading;
     document.getElementById("export").disabled = loading;
     document.getElementById("importBtn").disabled = loading;
+    document.getElementById("testConnection").disabled = loading;
     document.getElementById("pause").style.display = loading ? "block" : "none";
     document.getElementById("stop").style.display = loading ? "block" : "none";
     
@@ -210,36 +233,51 @@
     }
   }
 
-  // 💾 State management
-  function saveState(state) {
-    localStorage.setItem('mesBatchState', JSON.stringify({
-      ...state,
-      timestamp: Date.now()
-    }));
-  }
-
-  function loadState() {
-    const saved = localStorage.getItem('mesBatchState');
-    return saved ? JSON.parse(saved) : null;
-  }
-
-  function clearState() {
-    localStorage.removeItem('mesBatchState');
-  }
-
-  // 📧 Gửi request
+  // 📧 Gửi request với timeout
   async function sendRequest({endpoint, pkg, opserial, mcid, processtype}) {
     const url = `${endpoint}?mxpackage=${encodeURIComponent(pkg)}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}`;
     const start = Date.now();
+    
     try {
-      const res = await fetch(url);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      
+      const res = await fetch(url, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        },
+        mode: 'cors' // Explicitly set CORS mode
+      });
+      
+      clearTimeout(timeoutId);
+      
       const text = await res.text();
-      const ok = res.ok && /"IsSuccess":\s*true/.test(text);
       const duration = ((Date.now() - start) / 1000).toFixed(2);
-      return { ok, status: res.status, body: text, duration };
+      
+      // Kiểm tra response
+      let ok = res.ok;
+      let status = res.status;
+      
+      try {
+        const jsonResponse = JSON.parse(text);
+        ok = ok && jsonResponse.IsSuccess === true;
+      } catch (e) {
+        // Nếu không parse được JSON, xem như failed
+        ok = false;
+        status = 'INVALID_JSON';
+      }
+      
+      return { ok, status, body: text, duration };
+      
     } catch (err) {
       const duration = ((Date.now() - start) / 1000).toFixed(2);
-      return { ok: false, error: err.message, duration };
+      return { 
+        ok: false, 
+        error: err.name === 'AbortError' ? 'Timeout after 30s' : err.message, 
+        duration 
+      };
     }
   }
 
@@ -247,14 +285,46 @@
   async function sendWithRetry(task, retries = 3, delay = 1000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
       if (isStopped) return { ok: false, status: "STOPPED", attempt, duration: 0 };
+      
       const res = await sendRequest(task);
+      
       if (res.ok) return { ...res, attempt };
+      
       if (attempt < retries) {
         appendLog(`   🔁 [${task.index}] Retry ${attempt}/${retries}...`);
         await new Promise(r => setTimeout(r, delay));
       }
     }
     return { ok: false, attempt: retries, duration: 0 };
+  }
+
+  // 🔗 Test kết nối
+  async function testConnection() {
+    const endpoint = document.getElementById("endpoint").value.trim();
+    const pkg = document.getElementById("pkg").value.trim();
+    
+    if (!endpoint || !pkg) {
+      alert("Vui lòng nhập endpoint và package để test kết nối!");
+      return;
+    }
+    
+    try {
+      setLoadingState(true);
+      appendLog("🔗 Đang test kết nối...");
+      
+      const testUrl = `${endpoint}?mxpackage=${encodeURIComponent(pkg)}&opserial=1&mcid=TEST123`;
+      const response = await fetch(testUrl, { method: 'GET' });
+      
+      if (response.ok) {
+        appendLog("✅ Kết nối thành công! Server đang hoạt động.", false);
+      } else {
+        appendLog(`❌ Kết nối thất bại! Status: ${response.status}`, true);
+      }
+    } catch (error) {
+      appendLog(`❌ Lỗi kết nối: ${error.message}`, true);
+    } finally {
+      setLoadingState(false);
+    }
   }
 
   // 📁 File import handler
@@ -272,7 +342,7 @@
       appendLog(`📁 Đã import file: ${file.name} (${file.size} bytes)`);
     };
     reader.onerror = () => {
-      appendLog("❌ Lỗi đọc file!");
+      appendLog("❌ Lỗi đọc file!", true);
     };
     reader.readAsText(file);
     
@@ -300,21 +370,23 @@
     document.getElementById("log").textContent = "Log đã được xóa...\n";
   };
 
+  // 🔗 Test connection handler
+  document.getElementById("testConnection").onclick = testConnection;
+
   // 🚀 Main process
   async function runBatchProcess() {
     try {
       setLoadingState(true);
       const { pkg, lines, endpoint } = validateInputs();
       
-      const threads = parseInt(document.getElementById("threads").value) || 10;
-      const rateLimit = parseInt(document.getElementById("rateLimit").value) || 50;
-      const log = document.getElementById("log");
+      const threads = parseInt(document.getElementById("threads").value) || 3;
+      const rateLimit = parseInt(document.getElementById("rateLimit").value) || 10;
       const bar = document.getElementById("bar");
       const total = lines.length;
       let done = 0;
       const results = [];
 
-      log.textContent = `⚡ Bắt đầu gửi ${total} dòng (song song ${threads} luồng, giới hạn ${rateLimit} req/giây)...\n`;
+      appendLog(`⚡ Bắt đầu gửi ${total} dòng (song song ${threads} luồng, giới hạn ${rateLimit} req/giây)...`);
       
       currentBatchStart = Date.now();
       const queue = lines.map((line, idx) => {
@@ -334,7 +406,7 @@
           await rateLimiter.wait();
           const task = queue.shift();
           if (!task || !task.opserial || !task.mcid) {
-            appendLog(`⚠️ Bỏ qua dòng không hợp lệ: "${task}"`);
+            appendLog(`⚠️ Bỏ qua dòng không hợp lệ`);
             continue;
           }
 
@@ -344,11 +416,11 @@
           const icon = res.ok ? "✅" : (res.status === "STOPPED" ? "⏹️" : "❌");
           const retryNote = res.attempt > 1 ? ` 🔁(${res.attempt} lần)` : "";
           const timeNote = res.duration ? ` (${res.duration}s)` : "";
-          appendLog(`${icon} [${task.index}] ${task.mcid} → ${res.status || 'error'}${retryNote}${timeNote}`);
+          appendLog(`${icon} [${task.index}] ${task.mcid} → ${res.status || res.error || 'error'}${retryNote}${timeNote}`);
 
           results.push({
             ...task,
-            status: res.status || "ERROR",
+            status: res.status || res.error || "ERROR",
             success: res.ok,
             retries: res.attempt,
             duration: res.duration
@@ -359,9 +431,6 @@
           
           // Cập nhật thống kê
           updateStats(results, total, Date.now() - currentBatchStart);
-          
-          // Lưu state
-          saveState({ results, total, done, queue });
         }
       }
 
@@ -369,20 +438,19 @@
       await Promise.all(workers);
 
       const totalTime = Date.now() - currentBatchStart;
-      const avg = total / (totalTime / 1000);
+      const avg = totalTime > 0 ? (total / (totalTime / 1000)) : 0;
       
       if (isStopped) {
-        appendLog(`\n⏹️ Đã dừng thủ công sau ${formatTime(totalTime}.`);
+        appendLog(`\n⏹️ Đã dừng thủ công sau ${formatTime(totalTime)}.`);
         appendLog(`📊 Đã xử lý: ${done}/${total} requests`);
       } else {
         appendLog(`\n🎯 Hoàn tất toàn bộ trong ${formatTime(totalTime)} (${avg.toFixed(2)} req/s).`);
       }
       
       window._batchResults = results;
-      clearState(); // Xóa state khi hoàn thành
       
     } catch (error) {
-      appendLog(`❌ Lỗi: ${error.message}`);
+      appendLog(`❌ Lỗi: ${error.message}`, true);
       console.error('Batch process error:', error);
     } finally {
       setLoadingState(false);
@@ -414,13 +482,10 @@
     appendLog(`💾 Đã xuất file: ${a.download}`);
   };
 
-  // 🔄 Khôi phục state khi load page (nếu có)
-  window.addEventListener('load', () => {
-    const savedState = loadState();
-    if (savedState && confirm('Tìm thấy phiên làm việc chưa hoàn thành. Bạn có muốn khôi phục?')) {
-      // Implement resume logic here if needed
-      appendLog("💡 Tìm thấy state cũ. Bạn có thể bắt đầu process mới.");
-    }
+  // Thêm event listener để debug
+  document.addEventListener('DOMContentLoaded', function() {
+    appendLog("✅ Ứng dụng đã sẵn sàng!");
+    console.log("MES Batch Sender initialized");
   });
   </script>
 </body>
