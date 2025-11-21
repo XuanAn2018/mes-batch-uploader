@@ -2,88 +2,299 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title> MES QR SCANER </title>
+  <title>MES QR SCANNER</title>
   <style>
-    body { font-family: Calibri, sans-serif; background:#f7f9fc; margin:0; padding:0; }
+    :root {
+      --primary: #0057b7;
+      --primary-light: #0072ff;
+      --success: #28a745;
+      --warning: #ffc107;
+      --danger: #dc3545;
+      --info: #17a2b8;
+      --light: #f8f9fa;
+      --dark: #343a40;
+      --gray: #6c757d;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+      margin: 0; 
+      padding: 20px; 
+      color: #333;
+      line-height: 1.6;
+    }
+    
     .container {
-      max-width: 900px; margin: 30px auto; background: white;
-      padding: 25px 30px; border-radius: 14px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      max-width: 1000px; 
+      margin: 0 auto; 
+      background: white;
+      padding: 30px; 
+      border-radius: 12px;
+      box-shadow: var(--box-shadow);
     }
-    h1 { text-align:center; color:#0057b7; }
-    label { font-weight:600; display:block; margin-top:10px; }
+    
+    h1 { 
+      text-align: center; 
+      color: var(--primary); 
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: var(--gray);
+      margin-bottom: 30px;
+      font-size: 1.1rem;
+    }
+    
+    .card {
+      background: var(--light);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      margin-bottom: 20px;
+      border-left: 4px solid var(--primary);
+    }
+    
+    .card-title {
+      font-weight: 600;
+      margin-top: 0;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    label { 
+      font-weight: 600; 
+      display: block; 
+      margin-top: 15px; 
+      margin-bottom: 5px;
+    }
+    
     input, textarea, button {
-      width:100%; margin:6px 0; padding:10px; border-radius:6px;
-      border:1px solid #ccc; font-size:15px;
+      width: 100%; 
+      margin: 6px 0; 
+      padding: 12px; 
+      border-radius: var(--border-radius);
+      border: 1px solid #ddd; 
+      font-size: 15px;
+      transition: var(--transition);
     }
-    textarea { resize:vertical; }
-    button {
-      background:#0057b7; color:white; border:none; font-weight:bold;
-      cursor:pointer; transition:0.3s;
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(0, 87, 183, 0.2);
     }
-    button:hover { background:#0072ff; }
-    button:disabled { background:#6c757d; cursor:not-allowed; }
-    #progress { width:100%; background:#e5e5e5; border-radius:5px; margin-top:10px; height:14px; }
-    #bar { height:14px; background:linear-gradient(90deg,#00c851,#007e33); width:0%; transition:width 0.3s; }
-    pre {
-      background:#f0f0f0; padding:10px; border-radius:8px;
-      max-height:400px; overflow-y:auto; font-size:12px;
-      white-space:pre-wrap; line-height:1.2;
+    
+    textarea { 
+      resize: vertical; 
+      min-height: 120px;
       font-family: 'Courier New', monospace;
     }
-    .btn-row { display:flex; gap:10px; margin-top:10px; }
-    .btn-row button { flex:1; }
-    .file-input-row { display:flex; gap:10px; align-items:center; }
-    .file-input-row input[type="file"] { flex:2; }
-    .file-input-row button { flex:1; }
+    
+    button {
+      background: var(--primary); 
+      color: white; 
+      border: none; 
+      font-weight: 600;
+      cursor: pointer; 
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    button:hover { 
+      background: var(--primary-light); 
+      transform: translateY(-2px);
+    }
+    
+    button:disabled { 
+      background: var(--gray); 
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    #progress { 
+      width: 100%; 
+      background: #e5e5e5; 
+      border-radius: 10px; 
+      margin: 20px 0; 
+      height: 16px; 
+      overflow: hidden;
+    }
+    
+    #bar { 
+      height: 16px; 
+      background: linear-gradient(90deg, #00c851, #007e33); 
+      width: 0%; 
+      transition: width 0.5s;
+      border-radius: 10px;
+    }
+    
+    pre {
+      background: #f8f9fa; 
+      padding: 15px; 
+      border-radius: var(--border-radius);
+      max-height: 400px; 
+      overflow-y: auto; 
+      font-size: 13px;
+      white-space: pre-wrap; 
+      line-height: 1.4;
+      font-family: 'Courier New', monospace;
+      border: 1px solid #e9ecef;
+    }
+    
+    .btn-row { 
+      display: flex; 
+      gap: 10px; 
+      margin-top: 15px; 
+    }
+    
+    .btn-row button { 
+      flex: 1; 
+    }
+    
+    .file-input-row { 
+      display: flex; 
+      gap: 10px; 
+      align-items: center; 
+      margin-top: 10px;
+    }
+    
+    .file-input-row input[type="file"] { 
+      flex: 2; 
+      padding: 8px;
+    }
+    
+    .file-input-row button { 
+      flex: 1; 
+    }
+    
     .stats { 
       background: #e8f4fd; 
-      padding: 10px; 
-      border-radius: 6px; 
-      margin: 10px 0;
-      font-weight: bold;
+      padding: 15px; 
+      border-radius: var(--border-radius); 
+      margin: 15px 0;
+      font-weight: 600;
+      border-left: 4px solid var(--info);
     }
-    .error { color: red; }
-    .success { color: green; }
+    
+    .error { color: var(--danger); }
+    .success { color: var(--success); }
+    
+    .help-text {
+      font-size: 0.85rem;
+      color: var(--gray);
+      margin-top: 5px;
+      font-style: italic;
+    }
+    
+    .placeholder {
+      color: #aaa;
+    }
+    
+    .template-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: rgba(0, 87, 183, 0.1);
+      border-radius: var(--border-radius);
+      transition: var(--transition);
+    }
+    
+    .template-download:hover {
+      background: rgba(0, 87, 183, 0.2);
+    }
+    
+    .icon {
+      font-size: 1.2rem;
+    }
+    
+    .status-running { color: var(--success); }
+    .status-paused { color: var(--warning); }
+    .status-stopped { color: var(--danger); }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px;
+      }
+      
+      .btn-row {
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>⚡ MES QR SCANER ⚡</h1>
-    <p>Công cụ gửi hàng loạt lệnh MES đồng thời, tự động thử lại khi gặp lỗi, cho phép tạm dừng/dừng và hiển thị tiến độ chi tiết.</p>
+    <h1>⚡ MES QR SCANNER ⚡</h1>
+    <p class="subtitle">Công cụ gửi lệnh MES tự động với tốc độ mô phỏng thao tác người dùng</p>
 
-    <label>🔹 Package (mxpackage):</label>
-    <input id="pkg" placeholder="M_HAR-0207_1_HAR0294RGL001001_01_02" value="M_HAR-0207_1_HAR0294RGL001001_01_02">
+    <div class="card">
+      <h3 class="card-title">📦 Thông tin Package</h3>
+      <label>Package (mxpackage):</label>
+      <input id="pkg" placeholder="Ví dụ: M_HAR-0207_1_HAR0294RGL001001_01_02" value="M_HAR-0207_1_HAR0294RGL001001_01_02">
+      <div class="help-text">Mỗi package nên được xử lý trong một file CSV riêng</div>
+    </div>
 
-    <label>🔹 Danh sách (mỗi dòng: opserial,mcid[,processtype])</label>
-    <textarea id="list" rows="8" placeholder="1,M10002390
+    <div class="card">
+      <h3 class="card-title">📋 Dữ liệu cần xử lý</h3>
+      <label>Danh sách (mỗi dòng: opserial,mcid[,processtype]):</label>
+      <textarea id="list" placeholder="1,M10002390
 2,M10002391,FA
 3,M10002396,QA">1,M10002390
 2,M10002391,FA
 3,M10002396,QA</textarea>
-
-    <label>🔹 Import từ file CSV/TXT:</label>
-    <div class="file-input-row">
-      <input type="file" id="fileInput" accept=".csv,.txt,.xlsx">
-      <button id="importBtn" style="background:#6c757d">📁 Import File</button>
+      
+      <label>Import từ file CSV/TXT:</label>
+      <div class="file-input-row">
+        <input type="file" id="fileInput" accept=".csv,.txt">
+        <button id="importBtn" style="background:#6c757d">📁 Import File</button>
+      </div>
+      
+      <a href="#" id="downloadTemplate" class="template-download">
+        📥 Tải file mẫu CSV
+      </a>
+      <div class="help-text">
+        Cấu trúc file: opserial (cột A), mcid (cột B), processtype (cột C - tùy chọn)
+      </div>
     </div>
 
-    <label>🔹 Endpoint:</label>
-    <input id="endpoint" value="https://mes-system.chiscoong-cloudflare-com.workers.dev/">
-
-    <label>🔹 Số luồng song song:</label>
-    <input id="threads" type="number" min="1" max="20" value="3">
-
-    <label>🔹 Giới hạn request/giây:</label>
-    <input id="rateLimit" type="number" min="1" max="1000" value="10" placeholder="Số request tối đa mỗi giây">
+    <div class="card">
+      <h3 class="card-title">⚙️ Cấu hình kết nối</h3>
+      <label>Endpoint:</label>
+      <input id="endpoint" value="https://mes-system.chiscoong-cloudflare-com.workers.dev/">
+      
+      <div class="help-text">
+        <strong>Lưu ý:</strong> Hệ thống sẽ tự động giới hạn tốc độ gửi (1 request/lần, cách nhau 2-5 giây) để mô phỏng thao tác người dùng thực tế
+      </div>
+    </div>
 
     <div class="btn-row">
-      <button id="run">▶️ Gửi hàng loạt</button>
-      <button id="pause" style="background:#ffc107; display:none;">⏸️ Tạm dừng</button>
-      <button id="stop" style="background:#dc3545; display:none;">⏹️ Dừng</button>
+      <button id="run">▶️ Bắt đầu gửi</button>
+      <button id="pause" style="background:#ffc107; color: #000; display:none;">⏸️ Tạm dừng</button>
+      <button id="stop" style="background:#dc3545; display:none;">⏹️ Dừng lại</button>
     </div>
 
-    <div id="progress"><div id="bar"></div></div>
+    <div id="progress">
+      <div id="bar"></div>
+    </div>
 
     <div id="stats" class="stats" style="display:none;">
       📊 Thống kê: Đang xử lý...
@@ -181,23 +392,6 @@
     }
     
     return { pkg, lines, endpoint };
-  }
-
-  // 🔄 Rate Limiter class
-  class RateLimiter {
-    constructor(requestsPerSecond) {
-      this.delay = 1000 / requestsPerSecond;
-      this.lastRequest = 0;
-    }
-    
-    async wait() {
-      const now = Date.now();
-      const waitTime = this.lastRequest + this.delay - now;
-      if (waitTime > 0) {
-        await new Promise(r => setTimeout(r, waitTime));
-      }
-      this.lastRequest = Date.now();
-    }
   }
 
   // 📝 Append log với auto-scroll
@@ -327,6 +521,25 @@
     }
   }
 
+  // 📥 Tạo và tải file mẫu CSV
+  function downloadTemplate() {
+    const header = "opserial,mcid,processtype\n";
+    const rows = [
+      "1,M10002390,QA",
+      "2,M10002391,FA",
+      "3,M10002396,",
+      "4,M10002397,QC"
+    ];
+    
+    const blob = new Blob(["\uFEFF" + header + rows.join("\n")], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; 
+    a.download = `mes_template.csv`; 
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // 📁 File import handler
   document.getElementById("importBtn").onclick = () => {
     document.getElementById("fileInput").click();
@@ -338,8 +551,25 @@
     
     const reader = new FileReader();
     reader.onload = (event) => {
-      document.getElementById("list").value = event.target.result;
-      appendLog(`📁 Đã import file: ${file.name} (${file.size} bytes)`);
+      // Xử lý dữ liệu CSV
+      const content = event.target.result;
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      // Bỏ qua header nếu có
+      let dataLines = lines;
+      if (lines[0].includes('opserial') && lines[0].includes('mcid')) {
+        dataLines = lines.slice(1);
+      }
+      
+      // Chuyển đổi sang định dạng opserial,mcid,processtype
+      const formattedLines = dataLines.map(line => {
+        // Xử lý cả tab và comma như delimiter
+        const parts = line.split(/[\t,]/).map(part => part.trim());
+        return parts.join(',');
+      }).filter(line => line);
+      
+      document.getElementById("list").value = formattedLines.join('\n');
+      appendLog(`📁 Đã import file: ${file.name} (${file.size} bytes, ${formattedLines.length} dòng)`);
     };
     reader.onerror = () => {
       appendLog("❌ Lỗi đọc file!", true);
@@ -373,20 +603,25 @@
   // 🔗 Test connection handler
   document.getElementById("testConnection").onclick = testConnection;
 
+  // 📥 Template download handler
+  document.getElementById("downloadTemplate").onclick = (e) => {
+    e.preventDefault();
+    downloadTemplate();
+    appendLog("📥 Đã tải xuống file mẫu CSV");
+  };
+
   // 🚀 Main process
   async function runBatchProcess() {
     try {
       setLoadingState(true);
       const { pkg, lines, endpoint } = validateInputs();
       
-      const threads = parseInt(document.getElementById("threads").value) || 3;
-      const rateLimit = parseInt(document.getElementById("rateLimit").value) || 10;
       const bar = document.getElementById("bar");
       const total = lines.length;
       let done = 0;
       const results = [];
 
-      appendLog(`⚡ Bắt đầu gửi ${total} dòng (song song ${threads} luồng, giới hạn ${rateLimit} req/giây)...`);
+      appendLog(`⚡ Bắt đầu gửi ${total} dòng (tốc độ mô phỏng người dùng: 1 request/lần, cách nhau 2-5 giây)...`);
       
       currentBatchStart = Date.now();
       const queue = lines.map((line, idx) => {
@@ -394,16 +629,13 @@
         return { opserial, mcid, processtype, index: idx + 1 };
       });
 
-      const rateLimiter = new RateLimiter(rateLimit);
-
-      async function worker() {
+      async function processQueue() {
         while (queue.length > 0 && !isStopped) {
           if (isPaused) {
             await new Promise(r => setTimeout(r, 500));
             continue;
           }
 
-          await rateLimiter.wait();
           const task = queue.shift();
           if (!task || !task.opserial || !task.mcid) {
             appendLog(`⚠️ Bỏ qua dòng không hợp lệ`);
@@ -431,11 +663,17 @@
           
           // Cập nhật thống kê
           updateStats(results, total, Date.now() - currentBatchStart);
+          
+          // Tạm dừng ngẫu nhiên 2-5 giây trước khi gửi request tiếp theo
+          if (queue.length > 0 && !isStopped) {
+            const delay = Math.floor(Math.random() * 3000) + 2000; // 2-5 giây
+            appendLog(`⏳ Chờ ${delay/1000}s trước khi gửi request tiếp theo...`);
+            await new Promise(r => setTimeout(r, delay));
+          }
         }
       }
 
-      const workers = Array.from({ length: threads }, () => worker());
-      await Promise.all(workers);
+      await processQueue();
 
       const totalTime = Date.now() - currentBatchStart;
       const avg = totalTime > 0 ? (total / (totalTime / 1000)) : 0;
@@ -490,5 +728,3 @@
   </script>
 </body>
 </html>
-
-
