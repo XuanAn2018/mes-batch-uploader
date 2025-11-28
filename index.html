@@ -3,480 +3,358 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MES QR Scanner - Công Cụ Quét & Ghi Dữ Liệu Tự Động</title>
+  <title>MES QR Scanner Pro - Anti-Glare Mode</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
   <style>
     :root {
-      --primary: #0057b7;
-      --primary-light: #0072ff;
-      --primary-dark: #004494;
-      --success: #28a745;
-      --warning: #ffc107;
-      --danger: #dc3545;
-      --info: #17a2b8;
-      --light: #f8f9fa;
-      --dark: #343a40;
-      --gray: #6c757d;
-      --gray-light: #e9ecef;
-      --border-radius: 8px;
-      --box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      --transition: all 0.3s ease;
-    }
-    
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
-    body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
-      margin: 0; 
-      padding: 20px; 
-      color: #333;
-      line-height: 1.6;
-      min-height: 100vh;
-    }
-    
-    .container {
-      max-width: 1200px; 
-      margin: 0 auto; 
-      background: white;
-      padding: 30px; 
-      border-radius: 12px;
-      box-shadow: var(--box-shadow);
-    }
-    
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid var(--gray-light);
-    }
-    
-    h1 { 
-      color: var(--primary); 
-      margin-bottom: 10px;
-      font-weight: 700;
-      font-size: 2.2rem;
-    }
-    
-    .subtitle {
-      color: var(--gray);
-      margin-bottom: 15px;
-      font-size: 1.2rem;
-    }
-    
-    .description {
-      background: linear-gradient(135deg, #e8f4fd 0%, #d1e7ff 100%);
-      padding: 20px;
-      border-radius: var(--border-radius);
-      margin-bottom: 25px;
-      border-left: 4px solid var(--info);
-    }
-    
-    .description h3 {
-      color: var(--primary);
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .description ul {
-      padding-left: 20px;
-      margin: 10px 0;
-    }
-    
-    .description li {
-      margin-bottom: 8px;
-    }
-    
-    .card {
-      background: var(--light);
-      border-radius: var(--border-radius);
-      padding: 25px;
-      margin-bottom: 25px;
-      border-left: 4px solid var(--primary);
-      transition: var(--transition);
-    }
-    
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--box-shadow);
-    }
-    
-    .card-title {
-      font-weight: 600;
-      margin-top: 0;
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      font-size: 1.3rem;
-    }
-    
-    .config-group {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-    
-    @media (max-width: 768px) {
-      .config-group {
-        grid-template-columns: 1fr;
-      }
-    }
-    
-    .form-group {
-      margin-bottom: 20px;
-    }
-    
-    label { 
-      font-weight: 600; 
-      display: block; 
-      margin-bottom: 8px;
-      color: var(--dark);
-    }
-    
-    input, textarea, select, button {
-      width: 100%; 
-      margin: 6px 0; 
-      padding: 12px; 
-      border-radius: var(--border-radius);
-      border: 1px solid #ddd; 
-      font-size: 15px;
-      transition: var(--transition);
-      font-family: inherit;
-    }
-    
-    input:focus, textarea:focus, select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(0, 87, 183, 0.1);
-    }
-    
-    textarea { 
-      resize: vertical; 
-      min-height: 120px;
-      font-family: 'Courier New', monospace;
-      line-height: 1.4;
-    }
-    
-    button {
-      background: var(--primary); 
-      color: white; 
-      border: none; 
-      font-weight: 600;
-      cursor: pointer; 
-      transition: var(--transition);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 14px;
-    }
-    
-    button:hover { 
-      background: var(--primary-light); 
-      transform: translateY(-2px);
-    }
-    
-    button:active {
-      transform: translateY(0);
-    }
-    
-    button:disabled { 
-      background: var(--gray); 
-      cursor: not-allowed;
-      transform: none;
-    }
-    
-    .btn-primary { background: var(--primary); }
-    .btn-success { background: var(--success); }
-    .btn-warning { background: var(--warning); color: var(--dark); }
-    .btn-danger { background: var(--danger); }
-    .btn-info { background: var(--info); }
-    .btn-secondary { background: var(--gray); }
-    
-    #progress { 
-      width: 100%; 
-      background: #e5e5e5; 
-      border-radius: 10px; 
-      margin: 25px 0; 
-      height: 20px; 
-      overflow: hidden;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
-    }
-    
-    #bar { 
-      height: 20px; 
-      background: linear-gradient(90deg, #00c851, #007e33); 
-      width: 0%; 
-      transition: width 0.5s;
-      border-radius: 10px;
-      position: relative;
-    }
-    
-    #bar::after {
-      content: attr(data-progress);
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: white;
-      font-weight: bold;
-      font-size: 12px;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    }
-    
-    pre {
-      background: #1e1e1e; 
-      color: #d4d4d4;
-      padding: 20px; 
-      border-radius: var(--border-radius);
-      max-height: 400px; 
-      overflow-y: auto; 
-      font-size: 13px;
-      white-space: pre-wrap; 
-      line-height: 1.4;
-      font-family: 'Courier New', monospace;
-      border: 1px solid #333;
-    }
-    
-    .btn-row { 
-      display: flex; 
-      gap: 12px; 
-      margin-top: 20px; 
-    }
-    
-    .btn-row button { 
-      flex: 1; 
-    }
-    
-    .file-input-row { 
-      display: flex; 
-      gap: 12px; 
-      align-items: center; 
-      margin-top: 10px;
-    }
-    
-    .file-input-row input[type="file"] { 
-      flex: 2; 
-      padding: 8px;
-    }
-    
-    .file-input-row button { 
-      flex: 1; 
-    }
-    
-    .stats { 
-      background: linear-gradient(135deg, #e8f4fd 0%, #d1e7ff 100%);
-      padding: 20px; 
-      border-radius: var(--border-radius); 
-      margin: 20px 0;
-      font-weight: 600;
-      border-left: 4px solid var(--info);
-      display: none;
-    }
-    
-    .error { color: var(--danger); }
-    .success { color: var(--success); }
-    .warning { color: var(--warning); }
-    
-    .help-text {
-      font-size: 0.85rem;
-      color: var(--gray);
-      margin-top: 5px;
-      font-style: italic;
-    }
-    
-    .required::after {
-      content: " *";
-      color: var(--danger);
-    }
-    
-    .template-download {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 600;
-      margin-top: 10px;
-      padding: 10px 15px;
-      background: rgba(0, 87, 183, 0.1);
-      border-radius: var(--border-radius);
-      transition: var(--transition);
-      border: 1px solid transparent;
-    }
-    
-    .template-download:hover {
-      background: rgba(0, 87, 183, 0.2);
-      border-color: var(--primary);
-    }
-    
-    .icon {
-      font-size: 1.2rem;
-    }
-    
-    .status-running { color: var(--success); }
-    .status-paused { color: var(--warning); }
-    .status-stopped { color: var(--danger); }
-    
-    .log-time {
-      color: #6c757d;
-      font-size: 0.9em;
-    }
-    
-    .section-title {
-      font-size: 1.5rem;
-      color: var(--primary);
-      margin: 30px 0 20px 0;
-      padding-bottom: 10px;
-      border-bottom: 2px solid var(--gray-light);
-    }
-    
-    .quick-guide {
-      background: #fff3cd;
-      border-left: 4px solid var(--warning);
-      padding: 15px;
-      border-radius: var(--border-radius);
-      margin: 15px 0;
-    }
-    
-    .quick-guide h4 {
-      color: #856404;
-      margin-bottom: 10px;
+      /* Palette màu mới - Dịu mắt hơn */
+      --primary-gradient: linear-gradient(135deg, #4338ca 0%, #3b82f6 100%); /* Deep Indigo */
+      
+      /* Màu riêng cho các nút tiện ích */
+      --btn-import-bg: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); /* Purple */
+      --btn-download-bg: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); /* Cyan */
+      --btn-test-bg: linear-gradient(135deg, #475569 0%, #1e293b 100%); /* Slate/Dark */
+      --btn-clear-bg: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); /* Rose */
+      
+      /* Nền tối hơn một chút để chống chói */
+      --bg-body: #e2e8f0; 
+      --bg-card: #ffffff;
+      
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+      
+      --radius: 14px;
+      --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-glow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
 
-    @media (max-width: 768px) {
-      .container {
-        padding: 20px;
-      }
-      
-      .btn-row {
-        flex-direction: column;
-      }
-      
-      h1 {
-        font-size: 1.8rem;
-      }
+    * { box-sizing: border-box; outline: none; }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      /* Background chuyển màu nhẹ Xám Xanh - Dịu mắt */
+      background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
     }
+
+    /* Navbar */
+    .navbar {
+      background: #1e293b; /* Dark Navy */
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .brand {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #f8fafc;
+    }
+    
+    .status-badge {
+      font-size: 0.85rem;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      padding: 6px 16px;
+      border-radius: 99px;
+      font-weight: 600;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-badge::before {
+      content: ''; display: block; width: 8px; height: 8px;
+      background: currentColor; border-radius: 50%;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1400px;
+      margin: 30px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 25px;
+    }
+
+    @media (max-width: 1024px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-soft);
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid white;
+    }
+
+    .card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 15px; padding-bottom: 12px;
+      border-bottom: 2px solid #f1f5f9;
+    }
+    .card-title {
+      font-size: 1.1rem; font-weight: 700; color: #334155;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Inputs */
+    .form-group { margin-bottom: 18px; }
+    label {
+      display: block; margin-bottom: 6px;
+      font-weight: 600; font-size: 0.9rem; color: #475569;
+    }
+    input, textarea {
+      width: 100%; padding: 12px;
+      border: 2px solid var(--border-color);
+      border-radius: 10px; font-size: 0.95rem; font-family: inherit;
+      background: #f8fafc; transition: all 0.2s;
+    }
+    input:focus, textarea:focus {
+      border-color: #6366f1; background: white;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+    textarea { min-height: 140px; font-family: 'Courier New', monospace; line-height: 1.5; }
+
+    /* BUTTONS - Colorful & Contrast */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 20px; border-radius: 10px; font-weight: 600;
+      cursor: pointer; border: none; color: white;
+      transition: all 0.2s ease; font-size: 0.95rem; width: 100%;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .btn:hover { transform: translateY(-2px); filter: brightness(110%); box-shadow: 0 4px 6px rgba(0,0,0,0.15); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(100%); }
+
+    /* Main Actions */
+    .btn-primary { background: var(--primary-gradient); }
+    .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .btn-warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+    .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+    
+    /* Utility Buttons - Specific Colors */
+    .btn-purple { background: var(--btn-import-bg); }
+    .btn-cyan { background: var(--btn-download-bg); }
+    .btn-slate { background: var(--btn-test-bg); }
+    .btn-rose { background: var(--btn-clear-bg); }
+    
+    .btn-sm { padding: 8px 16px; font-size: 0.85rem; }
+
+    .action-row { display: flex; gap: 10px; margin-top: 5px; }
+
+    /* Stats */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px;
+    }
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .stat-card {
+      background: white; padding: 15px; border-radius: 12px;
+      box-shadow: var(--shadow-soft); text-align: center;
+      border-bottom: 4px solid transparent;
+    }
+    .stat-card.total { border-color: #6366f1; }
+    .stat-card.success { border-color: #10b981; }
+    .stat-card.error { border-color: #ef4444; }
+    .stat-card.rate { border-color: #3b82f6; }
+
+    .stat-value { font-size: 1.8rem; font-weight: 800; color: #1e293b; }
+    .stat-label { font-size: 0.8rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+    .stat-card.success .stat-value { color: #059669; }
+    .stat-card.error .stat-value { color: #dc2626; }
+
+    /* Progress */
+    .progress-track {
+      background: #e2e8f0; height: 20px; border-radius: 10px;
+      overflow: hidden; margin-bottom: 20px; position: relative;
+    }
+    .progress-bar {
+      height: 100%; background: linear-gradient(90deg, #4f46e5, #0ea5e9);
+      width: 0%; transition: width 0.3s ease;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 10px; color: white; font-size: 0.75rem; font-weight: 700;
+    }
+
+    /* Log */
+    .log-container {
+      background: #0f172a; /* Deep dark blue */
+      color: #e2e8f0; padding: 20px; border-radius: 12px;
+      font-family: 'Consolas', monospace; font-size: 0.9rem;
+      height: 450px; overflow-y: auto;
+      border: 1px solid #1e293b;
+    }
+    .log-entry { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; }
+    .log-time { color: #64748b; min-width: 70px; font-size: 0.8rem; }
+    .log-success { color: #4ade80; }
+    .log-error { color: #f87171; }
+    .log-info { color: #60a5fa; }
+
+    input[type="file"] { display: none; }
+    
+    /* Animation */
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+    }
+    .btn-pulse { animation: pulse 2s infinite; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Header Section -->
-    <div class="header">
-      <h1>⚡ MES QR SCANNER ⚡</h1>
-      <p class="subtitle">Công Cụ Ghi Nhận Dữ Liệu Sản Xuất Tự Động</p>
+
+  <!-- Navbar -->
+  <div class="navbar">
+    <div class="brand">
+      <span>⚡ MES PRO</span>
     </div>
+    <div id="statusBadge" class="status-badge">
+      Hệ thống sẵn sàng
+    </div>
+  </div>
 
-    <!-- Description Section -->
-   
-
-    <!-- Configuration Section -->
-    <div class="card">
-      <h3 class="card-title">⚙️ Cấu Hình Hệ Thống</h3>
-      
-      <div class="config-group">
-        <div class="form-group">
-          <label for="endpoint" class="required">Endpoint URL:</label>
-          <input type="url" id="endpoint" value="https://mes-qr-scanner.chiscoong-cloudflare-com.workers.dev/" placeholder="https://your-worker.workers.dev/">
-          <div class="help-text">Địa chỉ API endpoint cho MES QR SCANNER </div>
+  <div class="container">
+    
+    <!-- Left Column: Settings -->
+    <div class="left-col">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📝 Cấu Hình Dữ Liệu</div>
         </div>
         
         <div class="form-group">
-          <label for="apiKey" class="required">API Key:</label>
-          <input type="password" id="apiKey" placeholder="Nhập API key của bạn" value="mes_user1_pk2024">
-          <div class="help-text">Liên hệ quản trị viên để lấy API Key</div>
+          <label>API Key (Mã bảo mật)</label>
+          <input type="password" id="apiKey" value="mes_user1_pk2024" placeholder="••••••••••••••">
         </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="pkg" class="required">Package (mxpackage):</label>
-        <input id="pkg" placeholder="M_XXX-XXXX_X_XXXXXXXXXXXXXXXX_XX" value="M_HAR-0207_1_HAR0300RGL001001_01_02">
-        <div class="help-text">Mỗi package nên được xử lý trong một file CSV riêng</div>
-      </div>
-    </div>
 
-    <!-- Data Input Section -->
-    <div class="card">
-      <h3 class="card-title">📊 Dữ Liệu Cần Xử Lý</h3>
-      
-      <div class="form-group">
-        <label for="list" class="required">Danh sách (mỗi dòng: opserial,mcid[,processtype]):</label>
-        <textarea id="list" placeholder="1,M10002390
-2,M10002391,FA
-3,M10002396,QA">1,60:01:94:3A:74:B5,QA
+        <div class="form-group">
+          <label>Package ID (Mã lô)</label>
+          <input type="text" id="pkg" value="M_HAR-0207_1_HAR0300RGL001001_01_02">
+        </div>
+
+        <div class="form-group">
+          <label>Nhập Dữ Liệu (Opserial, MCID, Type)</label>
+          <div class="action-row" style="margin-bottom: 10px;">
+            <!-- NÚT MÀU MỚI: Tím & Cyan -->
+            <button id="importBtn" class="btn btn-purple btn-sm" style="flex:1;">📂 Mở File CSV</button>
+            <button id="downloadTemplate" class="btn btn-cyan btn-sm" style="flex:1;">📥 Tải Mẫu</button>
+            <input type="file" id="fileInput" accept=".csv,.txt">
+          </div>
+          <textarea id="list" placeholder="1,60:01:94:3A:74:B5,QA
+2,60:01:94:3A:74:B6,FA">1,60:01:94:3A:74:B5,QA
 2,60:01:94:3A:74:B6,FA
 3,60:01:94:3A:74:B7,QC</textarea>
-        <div class="help-text">Format: opserial (bắt buộc), mcid (bắt buộc), processtype (tùy chọn: QA, FA, QC)</div>
+        </div>
       </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🔧 Tiện Ích Hệ Thống</div>
+        </div>
+        <div class="action-row">
+           <!-- NÚT MÀU MỚI: Xám Đen & Hồng Đậm -->
+           <button id="testConnection" class="btn btn-slate btn-sm">🔗 Test Kết Nối</button>
+           <button id="clearLog" class="btn btn-rose btn-sm">🧹 Xóa Log</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Monitor -->
+    <div class="right-col">
       
-      <div class="form-group">
-        <label>Import từ file CSV/TXT:</label>
-        <div class="file-input-row">
-          <input type="file" id="fileInput" accept=".csv,.txt">
-          <button id="importBtn" class="btn-secondary">📁 Import File</button>
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card total">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Tổng số</div>
         </div>
-        
-        <a href="#" id="downloadTemplate" class="template-download">
-          📥 Tải file mẫu CSV
-        </a>
-        <div class="help-text">
-          Cấu trúc file: opserial (cột A), mcid (cột B), processtype (cột C - tùy chọn)
+        <div class="stat-card success">
+          <div class="stat-value" id="statSuccess">0</div>
+          <div class="stat-label">Thành công</div>
+        </div>
+        <div class="stat-card error">
+          <div class="stat-value" id="statFailed">0</div>
+          <div class="stat-label">Thất bại</div>
+        </div>
+        <div class="stat-card rate">
+          <div class="stat-value" id="statRate">0.0</div>
+          <div class="stat-label">Giây/Req</div>
         </div>
       </div>
-    </div>
 
-    <!-- Control Section -->
-    <h3 class="section-title">🎮 Điều Khiển Quá Trình</h3>
-    
-    <div class="btn-row">
-      <button id="run" class="btn-primary">▶️ Bắt Đầu Gửi</button>
-      <button id="pause" class="btn-warning" style="display:none;">⏸️ Tạm Dừng</button>
-      <button id="stop" class="btn-danger" style="display:none;">⏹️ Dừng Lại</button>
-    </div>
+      <!-- Main Controls -->
+      <div class="card" style="border: none; background: transparent; padding: 0; box-shadow: none;">
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+          <button id="run" class="btn btn-primary btn-pulse" style="flex: 2; font-size: 1.1rem;">
+            🚀 BẮT ĐẦU CHẠY
+          </button>
+          <button id="pause" class="btn btn-warning" style="display:none; flex: 1;">⏸️ Tạm Dừng</button>
+          <button id="stop" class="btn btn-danger" style="display:none; flex: 1;">⏹️ Dừng Lại</button>
+          <button id="export" class="btn btn-success" disabled style="flex: 1;">💾 Xuất CSV</button>
+        </div>
+      </div>
 
-    <!-- Progress Section -->
-    <div id="progress">
-      <div id="bar" data-progress="0%"></div>
-    </div>
+      <!-- Progress -->
+      <div class="progress-track">
+        <div id="progressBar" class="progress-bar" style="width: 0%">0%</div>
+      </div>
 
-    <!-- Statistics Section -->
-    <div id="stats" class="stats">
-      📊 Thống kê: Đang xử lý...
-    </div>
+      <!-- Terminal Logs -->
+      <div class="log-container" id="log">
+        <div class="log-entry">
+          <span class="log-time">SYSTEM</span> 
+          <span class="log-info">Giao diện sẵn sàng. Vui lòng nhấn "Bắt Đầu".</span>
+        </div>
+      </div>
 
-    <!-- Log Section -->
-    <h3 class="section-title">📋 Log Tiến Trình</h3>
-    <pre id="log">Chờ bắt đầu xử lý...</pre>
-    
-    <!-- Action Buttons -->
-    <div class="btn-row">
-      <button id="export" class="btn-success">💾 Xuất Kết Quả CSV</button>
-      <button id="clearLog" class="btn-secondary">🗑️ Xóa Log</button>
-      <button id="testConnection" class="btn-info">🔗 Test Kết Nối</button>
     </div>
   </div>
 
   <script>
-  // Biến toàn cục
+  // ==========================================
+  // 🔒 CẤU HÌNH HỆ THỐNG
+  // ==========================================
+  const API_ENDPOINT = "https://mes-qr-scanner.chiscoong-cloudflare-com.workers.dev/";
+
+  // Globals
   let isPaused = false;
   let isStopped = false;
   let currentBatchStart = null;
-  let processingStats = {
-    total: 0,
-    processed: 0,
-    success: 0,
-    failed: 0
-  };
+  let batchResults = [];
+  
+  // Elements
+  const logEl = document.getElementById("log");
+  const progressBar = document.getElementById("progressBar");
+  const btnRun = document.getElementById("run");
+  const btnPause = document.getElementById("pause");
+  const btnStop = document.getElementById("stop");
+  const btnExport = document.getElementById("export");
+  const statusBadge = document.getElementById("statusBadge");
 
-  // ⏱️ Helper format mm:ss
+  // Utilities
   function formatTime(ms) {
     const totalSec = Math.floor(ms / 1000);
     const m = Math.floor(totalSec / 60).toString().padStart(2, "0");
@@ -484,425 +362,217 @@
     return `${m}:${s}`;
   }
 
-  // 📊 Cập nhật thống kê
-  function updateStats(results, total, elapsedTime) {
-    const statsEl = document.getElementById("stats");
-    if (!results.length) {
-      statsEl.style.display = 'none';
-      return;
-    }
+  function appendLog(message, type = 'info') {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false });
+    let colorClass = 'log-info';
     
+    if (type === 'error') colorClass = 'log-error';
+    else if (type === 'success') colorClass = 'log-success';
+    else if (type === 'warning') colorClass = 'log-warning';
+
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.innerHTML = `<span class="log-time">${timeStr}</span> <span class="${colorClass}">${message}</span>`;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function updateStats(results, total, startTime) {
     const success = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success && r.status !== "STOPPED").length;
-    const stopped = results.filter(r => r.status === "STOPPED").length;
-    const pending = total - results.length;
     
-    const avgRetries = results.length > 0 
-      ? (results.reduce((sum, r) => sum + (r.retries || 0), 0) / results.length).toFixed(2)
-      : "0.00";
-    
-    const avgDuration = results.length > 0
-      ? (results.reduce((sum, r) => sum + (parseFloat(r.duration) || 0), 0) / results.length).toFixed(2)
-      : "0.00";
-    
-    const currentRate = elapsedTime > 0 ? (results.length / (elapsedTime / 1000)).toFixed(2) : "0.00";
-    
-    statsEl.innerHTML = `
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-        <div>📦 Tổng: <strong>${total}</strong></div>
-        <div>✅ Thành công: <strong style="color: green">${success}</strong></div>
-        <div>❌ Thất bại: <strong style="color: red">${failed}</strong></div>
-        <div>⏹️ Đã dừng: <strong>${stopped}</strong></div>
-        <div>⏳ Chờ xử lý: <strong>${pending}</strong></div>
-        <div>🔄 Retry TB: <strong>${avgRetries}</strong></div>
-        <div>⏱️ Thời gian TB: <strong>${avgDuration}s</strong></div>
-        <div>🚀 Tốc độ: <strong>${currentRate} req/s</strong></div>
-      </div>
-    `;
-    statsEl.style.display = 'block';
+    document.getElementById("statTotal").textContent = total;
+    document.getElementById("statSuccess").textContent = success;
+    document.getElementById("statFailed").textContent = failed;
+
+    const elapsedTime = (Date.now() - startTime) / 1000;
+    const rate = elapsedTime > 0 ? (results.length / elapsedTime).toFixed(2) : "0.0";
+    document.getElementById("statRate").textContent = rate;
   }
 
-  // 🚨 Validation chi tiết
-  function validateInputs() {
-    const endpoint = document.getElementById("endpoint").value.trim();
-    const apiKey = document.getElementById("apiKey").value.trim();
-    const pkg = document.getElementById("pkg").value.trim();
-    const lines = document.getElementById("list").value.split("\n").map(x => x.trim()).filter(Boolean);
+  function setRunningState(isRunning) {
+    btnRun.style.display = isRunning ? "none" : "block";
+    btnPause.style.display = isRunning ? "block" : "none";
+    btnStop.style.display = isRunning ? "block" : "none";
     
-    if (!endpoint) throw new Error("❗ Vui lòng nhập endpoint!");
-    if (!apiKey) throw new Error("❗ Vui lòng nhập API Key!");
-    if (!pkg) throw new Error("❗ Vui lòng nhập package!");
-    if (!lines.length) throw new Error("❗ Vui lòng nhập danh sách công đoạn / máy!");
+    document.getElementById("apiKey").disabled = isRunning;
+    document.getElementById("pkg").disabled = isRunning;
+    document.getElementById("list").disabled = isRunning;
+    document.getElementById("importBtn").disabled = isRunning;
     
-    // Validate endpoint URL
-    try {
-      new URL(endpoint);
-    } catch (e) {
-      throw new Error("❗ Endpoint không hợp lệ!");
-    }
-    
-    // Validate từng dòng
-    const invalidLines = [];
-    lines.forEach((line, idx) => {
-      const parts = line.split(",").map(x => x.trim());
-      if (parts.length < 2 || !parts[0] || !parts[1]) {
-        invalidLines.push(`Dòng ${idx + 1}: "${line}"`);
-      }
-    });
-    
-    if (invalidLines.length > 0) {
-      throw new Error(`Dòng không hợp lệ:\n${invalidLines.join("\n")}`);
-    }
-    
-    return { endpoint, apiKey, pkg, lines };
-  }
+    btnExport.disabled = isRunning || batchResults.length === 0;
 
-  // 📝 Append log với auto-scroll
-  function appendLog(message, isError = false) {
-    const log = document.getElementById("log");
-    const timestamp = new Date().toLocaleTimeString();
-    const logEntry = `<span class="log-time">[${timestamp}]</span> ${message}`;
-    
-    if (log.textContent === "Chờ bắt đầu xử lý...") {
-      log.innerHTML = logEntry + "\n";
+    if (isRunning) {
+      statusBadge.innerHTML = "⚡ Đang xử lý...";
+      statusBadge.style.color = "#f59e0b";
+      statusBadge.style.background = "rgba(245, 158, 11, 0.15)";
+      statusBadge.style.borderColor = "#f59e0b";
     } else {
-      log.innerHTML += logEntry + "\n";
-    }
-    
-    log.scrollTop = log.scrollHeight;
-    
-    // Log ra console để debug
-    if (isError) {
-      console.error(message);
-    } else {
-      console.log(message);
-    }
-  }
-
-  // ⚙️ Loading state management
-  function setLoadingState(loading) {
-    document.getElementById("run").disabled = loading;
-    document.getElementById("export").disabled = loading;
-    document.getElementById("importBtn").disabled = loading;
-    document.getElementById("testConnection").disabled = loading;
-    document.getElementById("pause").style.display = loading ? "flex" : "none";
-    document.getElementById("stop").style.display = loading ? "flex" : "none";
-    
-    if (!loading) {
+      statusBadge.innerHTML = "✅ Sẵn sàng";
+      statusBadge.style.color = "#34d399";
+      statusBadge.style.background = "rgba(16, 185, 129, 0.15)";
+      statusBadge.style.borderColor = "#34d399";
       isPaused = false;
       isStopped = false;
-      document.getElementById("pause").textContent = "⏸️ Tạm Dừng";
-      document.getElementById("pause").className = "btn-warning";
+      btnPause.textContent = "⏸️ Tạm Dừng";
+      btnPause.className = "btn btn-warning";
     }
   }
 
-  // 📧 Gửi request với timeout và API Key
-  async function sendRequest({endpoint, apiKey, pkg, opserial, mcid, processtype}) {
-    // Thêm API Key vào URL parameter
-    const url = `${endpoint}?mxpackage=${encodeURIComponent(pkg)}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}&apikey=${encodeURIComponent(apiKey)}`;
+  // API Logic
+  async function sendRequest({apiKey, pkg, opserial, mcid, processtype}) {
+    const url = `${API_ENDPOINT}?mxpackage=${encodeURIComponent(pkg)}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}&apikey=${encodeURIComponent(apiKey)}`;
     const start = Date.now();
-    
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
-      
-      const res = await fetch(url, {
-        method: 'GET',
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-        },
-        mode: 'cors'
-      });
-      
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const res = await fetch(url, { method: 'GET', signal: controller.signal, mode: 'cors' });
       clearTimeout(timeoutId);
-      
       const text = await res.text();
       const duration = ((Date.now() - start) / 1000).toFixed(2);
       
-      // Kiểm tra response
       let ok = res.ok;
-      let status = res.status;
-      
       try {
-        const jsonResponse = JSON.parse(text);
-        ok = ok && jsonResponse.IsSuccess === true;
-      } catch (e) {
-        // Nếu không parse được JSON, xem như failed
-        ok = false;
-        status = 'INVALID_JSON';
-      }
+        const json = JSON.parse(text);
+        if (json.IsSuccess === true) ok = true;
+      } catch (e) {}
       
-      return { ok, status, body: text, duration };
-      
+      return { ok, status: res.status, body: text, duration };
     } catch (err) {
       const duration = ((Date.now() - start) / 1000).toFixed(2);
-      return { 
-        ok: false, 
-        error: err.name === 'AbortError' ? 'Timeout after 30s' : err.message, 
-        duration 
-      };
+      return { ok: false, error: err.message, duration };
     }
   }
 
-  // 🔁 Retry logic
-  async function sendWithRetry(task, retries = 3, delay = 1000) {
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      if (isStopped) return { ok: false, status: "STOPPED", attempt, duration: 0 };
-      
-      const res = await sendRequest(task);
-      
-      if (res.ok) return { ...res, attempt };
-      
-      if (attempt < retries) {
-        appendLog(`   🔁 [${task.index}] Retry ${attempt}/${retries}...`);
-        await new Promise(r => setTimeout(r, delay));
-      }
-    }
-    return { ok: false, attempt: retries, duration: 0 };
-  }
-
-  // 🔗 Test kết nối
-  async function testConnection() {
-    const endpoint = document.getElementById("endpoint").value.trim();
+  // Main Loop
+  async function runBatchProcess() {
     const apiKey = document.getElementById("apiKey").value.trim();
     const pkg = document.getElementById("pkg").value.trim();
+    const rawLines = document.getElementById("list").value.split("\n").map(x => x.trim()).filter(Boolean);
+
+    if (!apiKey || !pkg || rawLines.length === 0) return alert("Thiếu thông tin đầu vào!");
+
+    batchResults = [];
+    document.getElementById("statSuccess").textContent = "0";
+    document.getElementById("statFailed").textContent = "0";
+    progressBar.style.width = "0%";
+    progressBar.textContent = "0%";
     
-    if (!endpoint || !apiKey || !pkg) {
-      alert("Vui lòng nhập endpoint, API key và package để test kết nối!");
-      return;
-    }
-    
-    try {
-      setLoadingState(true);
-      appendLog("🔗 Đang test kết nối...");
+    appendLog("--- KHỞI ĐỘNG TIẾN TRÌNH ---", "info");
+    setRunningState(true);
+    currentBatchStart = Date.now();
+
+    const queue = rawLines.map((line, idx) => {
+      const parts = line.split(",").map(x => x.trim());
+      return { apiKey, pkg, opserial: parts[0], mcid: parts[1], processtype: parts[2]||'', index: idx + 1 };
+    });
+
+    const total = queue.length;
+    let done = 0;
+
+    while (queue.length > 0) {
+      if (isStopped) break;
+      if (isPaused) { await new Promise(r => setTimeout(r, 500)); continue; }
+
+      const task = queue.shift();
+      if (!task.opserial || !task.mcid) { done++; continue; }
+
+      appendLog(`📤 [${task.index}/${total}] Gửi MCID: ${task.mcid}...`);
       
-      const testUrl = `${endpoint}?mxpackage=${encodeURIComponent(pkg)}&opserial=1&mcid=TEST123&apikey=${encodeURIComponent(apiKey)}`;
-      const response = await fetch(testUrl, { method: 'GET' });
-      
-      if (response.ok) {
-        appendLog("✅ Kết nối thành công! Server đang hoạt động.", false);
-      } else {
-        appendLog(`❌ Kết nối thất bại! Status: ${response.status}`, true);
+      let attempt = 0;
+      let result = null;
+      while (attempt < 3 && !isStopped) {
+        attempt++;
+        result = await sendRequest(task);
+        if (result.ok) break;
+        if (attempt < 3) await new Promise(r => setTimeout(r, 1000));
       }
-    } catch (error) {
-      appendLog(`❌ Lỗi kết nối: ${error.message}`, true);
-    } finally {
-      setLoadingState(false);
+
+      const resObj = { ...task, status: result.ok ? "OK" : (result.error||result.status), success: result.ok, duration: result.duration };
+      batchResults.push(resObj);
+      done++;
+      
+      const pct = Math.round((done/total)*100);
+      progressBar.style.width = `${pct}%`;
+      progressBar.textContent = `${pct}%`;
+
+      if (result.ok) appendLog(`✅ Thành công (${result.duration}s)`, "success");
+      else appendLog(`❌ Thất bại: ${resObj.status}`, "error");
+
+      updateStats(batchResults, total, currentBatchStart);
+      
+      if (queue.length > 0 && !isStopped) {
+        await new Promise(r => setTimeout(r, Math.random() * 2000 + 1000));
+      }
     }
+
+    setRunningState(false);
+    appendLog(`🏁 Hoàn tất trong ${formatTime(Date.now() - currentBatchStart)}.`);
   }
 
-  // 📥 Tạo và tải file mẫu CSV
-  function downloadTemplate() {
-    const header = "opserial,mcid,processtype\n";
-    const rows = [
-      "1,60:01:94:3A:74:B5,QA",
-      "2,60:01:94:3A:74:B6,FA",
-      "3,60:01:94:3A:74:B7,QC",
-      "4,60:01:94:3A:74:B8,"
-    ];
-    
-    const blob = new Blob(["\uFEFF" + header + rows.join("\n")], {type:'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; 
-    a.download = `mes_template_${new Date().toISOString().slice(0,10)}.csv`; 
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  // 📁 File import handler
-  document.getElementById("importBtn").onclick = () => {
-    document.getElementById("fileInput").click();
+  // Events
+  btnRun.onclick = runBatchProcess;
+  
+  btnPause.onclick = () => {
+    isPaused = !isPaused;
+    btnPause.textContent = isPaused ? "▶️ Tiếp Tục" : "⏸️ Tạm Dừng";
+    btnPause.className = isPaused ? "btn btn-success" : "btn btn-warning";
+    appendLog(isPaused ? "⏸️ Đã tạm dừng." : "▶️ Tiếp tục chạy.");
   };
 
+  btnStop.onclick = () => {
+    if(confirm("Dừng hệ thống?")) {
+      isStopped = true;
+      appendLog("🛑 Đã nhận lệnh dừng!", "error");
+    }
+  };
+
+  document.getElementById("testConnection").onclick = async () => {
+    const apiKey = document.getElementById("apiKey").value.trim();
+    if(!apiKey) return alert("Nhập API Key trước!");
+    appendLog("🔗 Đang kiểm tra server...");
+    const res = await sendRequest({ apiKey, pkg: "TEST", opserial: "0", mcid: "TEST" });
+    if (res.status === 404 || res.status === 200 || res.ok) appendLog("✅ Kết nối Server Tốt!", "success");
+    else appendLog(`❌ Lỗi kết nối: ${res.status||res.error}`, "error");
+  };
+
+  document.getElementById("importBtn").onclick = () => document.getElementById("fileInput").click();
   document.getElementById("fileInput").onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target.result;
-      const lines = content.split('\n').filter(line => line.trim());
-      
-      let dataLines = lines;
-      if (lines[0].includes('opserial') && lines[0].includes('mcid')) {
-        dataLines = lines.slice(1);
-      }
-      
-      const formattedLines = dataLines.map(line => {
-        const parts = line.split(/[\t,]/).map(part => part.trim());
-        return parts.join(',');
-      }).filter(line => line);
-      
-      document.getElementById("list").value = formattedLines.join('\n');
-      appendLog(`📁 Đã import file: ${file.name} (${formattedLines.length} dòng)`);
+    const f = e.target.files[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.onload = (ev) => {
+      const t = ev.target.result;
+      const l = t.split('\n').filter(x=>x.trim().length>0);
+      const d = l[0].toLowerCase().includes('opserial') ? l.slice(1) : l;
+      document.getElementById("list").value = d.map(x=>x.replace(/\t/g,',')).join('\n');
+      appendLog(`📂 Đã load ${d.length} dòng dữ liệu.`, "success");
     };
-    reader.onerror = () => {
-      appendLog("❌ Lỗi đọc file!", true);
-    };
-    reader.readAsText(file);
-    
+    r.readAsText(f);
     e.target.value = '';
   };
 
-  // ⏯️ Pause/Resume handler
-  document.getElementById("pause").onclick = () => {
-    isPaused = !isPaused;
-    if (isPaused) {
-      document.getElementById("pause").textContent = "▶️ Tiếp Tục";
-      document.getElementById("pause").className = "btn-success";
-      appendLog("⏸️ Đã tạm dừng");
-    } else {
-      document.getElementById("pause").textContent = "⏸️ Tạm Dừng";
-      document.getElementById("pause").className = "btn-warning";
-      appendLog("▶️ Đã tiếp tục");
-    }
-  };
-
-  // ⏹️ Stop handler
-  document.getElementById("stop").onclick = () => {
-    if (!isStopped) {
-      isStopped = true;
-      appendLog("⏹️ Đang dừng quá trình gửi...");
-    }
-  };
-
-  // 🧹 Clear log handler
-  document.getElementById("clearLog").onclick = () => {
-    document.getElementById("log").innerHTML = "Log đã được xóa...\n";
-    document.getElementById("stats").style.display = 'none';
-  };
-
-  // 🔗 Test connection handler
-  document.getElementById("testConnection").onclick = testConnection;
-
-  // 📥 Template download handler
-  document.getElementById("downloadTemplate").onclick = (e) => {
-    e.preventDefault();
-    downloadTemplate();
-    appendLog("📥 Đã tải xuống file mẫu CSV");
-  };
-
-  // 🚀 Main process
-  async function runBatchProcess() {
-    try {
-      setLoadingState(true);
-      const { endpoint, apiKey, pkg, lines } = validateInputs();
-      
-      const bar = document.getElementById("bar");
-      const total = lines.length;
-      let done = 0;
-      const results = [];
-
-      appendLog(`⚡ Bắt đầu gửi ${total} dòng đến package: ${pkg}`);
-      appendLog(`🌐 Endpoint: ${endpoint}`);
-      appendLog(`🔑 API Key: ${apiKey.slice(0, 8)}...`);
-      appendLog(`⏰ Tốc độ: 1 request/lần, cách nhau 2-5 giây`);
-      
-      currentBatchStart = Date.now();
-      const queue = lines.map((line, idx) => {
-        const [opserial, mcid, processtype] = line.split(",").map(x => x.trim());
-        return { endpoint, apiKey, pkg, opserial, mcid, processtype, index: idx + 1 };
-      });
-
-      async function processQueue() {
-        while (queue.length > 0 && !isStopped) {
-          if (isPaused) {
-            await new Promise(r => setTimeout(r, 500));
-            continue;
-          }
-
-          const task = queue.shift();
-          if (!task || !task.opserial || !task.mcid) {
-            appendLog(`⚠️ Bỏ qua dòng không hợp lệ`);
-            continue;
-          }
-
-          appendLog(`🚀 [${task.index}] Gửi ${task.mcid} (op ${task.opserial}${task.processtype ? ',' + task.processtype : ''})...`);
-
-          const res = await sendWithRetry(task);
-          const icon = res.ok ? "✅" : (res.status === "STOPPED" ? "⏹️" : "❌");
-          const retryNote = res.attempt > 1 ? ` 🔁(${res.attempt} lần)` : '';
-          const timeNote = res.duration ? ` (${res.duration}s)` : '';
-          appendLog(`${icon} [${task.index}] ${task.mcid} → ${res.status || res.error || 'error'}${retryNote}${timeNote}`);
-
-          results.push({
-            ...task,
-            status: res.status || res.error || "ERROR",
-            success: res.ok,
-            retries: res.attempt,
-            duration: res.duration
-          });
-
-          done++;
-          const progress = (done/total)*100;
-          bar.style.width = `${progress}%`;
-          bar.setAttribute('data-progress', `${Math.round(progress)}%`);
-          
-          updateStats(results, total, Date.now() - currentBatchStart);
-          
-          if (queue.length > 0 && !isStopped) {
-            const delay = Math.floor(Math.random() * 3000) + 2000;
-            appendLog(`⏳ Chờ ${delay/1000}s trước khi gửi request tiếp theo...`);
-            await new Promise(r => setTimeout(r, delay));
-          }
-        }
-      }
-
-      await processQueue();
-
-      const totalTime = Date.now() - currentBatchStart;
-      const avg = totalTime > 0 ? (total / (totalTime / 1000)) : 0;
-      
-      if (isStopped) {
-        appendLog(`\n⏹️ Đã dừng thủ công sau ${formatTime(totalTime)}.`);
-        appendLog(`📊 Đã xử lý: ${done}/${total} requests`);
-      } else {
-        appendLog(`\n🎯 Hoàn tất toàn bộ trong ${formatTime(totalTime)} (${avg.toFixed(2)} req/s).`);
-      }
-      
-      window._batchResults = results;
-      
-    } catch (error) {
-      appendLog(`❌ Lỗi: ${error.message}`, true);
-      console.error('Batch process error:', error);
-    } finally {
-      setLoadingState(false);
-      if (window._batchResults) {
-        updateStats(window._batchResults, window._batchResults.length, Date.now() - currentBatchStart);
-      }
-    }
-  }
-
-  // ▶️ Run handler
-  document.getElementById("run").onclick = runBatchProcess;
-
-  // 💾 Export handler
-  document.getElementById("export").onclick = () => {
-    const data = window._batchResults || [];
-    if (!data.length) return alert("Chưa có dữ liệu để xuất!");
-    
-    const header = "index,opserial,mcid,processtype,status,success,retries,duration(s)\n";
-    const rows = data.map(r => `${r.index},${r.opserial},${r.mcid},${r.processtype||''},${r.status},${r.success},${r.retries},${r.duration}`);
-    const blob = new Blob(["\uFEFF" + header + rows.join("\n")], {type:'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
+  btnExport.onclick = () => {
+    if(!batchResults.length) return;
+    const csv = "Index,Opserial,Mcid,Type,Status,Duration\n" + batchResults.map(r=>`${r.index},${r.opserial},${r.mcid},${r.processtype},${r.status},${r.duration}`).join('\n');
     const a = document.createElement('a');
-    a.href = url; 
-    a.download = `mes_batch_result_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.csv`; 
+    a.href = URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:'text/csv'}));
+    a.download = `MES_Report_${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
-    
-    appendLog(`💾 Đã xuất file: ${a.download}`);
   };
 
-  // Khởi tạo ứng dụng
-  document.addEventListener('DOMContentLoaded', function() {
-    appendLog("✅ Ứng dụng đã sẵn sàng!");
-    appendLog("💡 Hướng dẫn: Nhập API Key, Package và danh sách MCID, sau đó click 'Bắt Đầu Gửi'");
-    console.log("MES QR Scanner initialized");
-  });
+  document.getElementById("downloadTemplate").onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(["\uFEFFopserial,mcid,processtype\n1,MC001,QA\n2,MC002,FA"],{type:'text/csv'}));
+    a.download = "template.csv";
+    a.click();
+  };
+
+  document.getElementById("clearLog").onclick = () => {
+    logEl.innerHTML = "";
+    appendLog("Log đã được dọn dẹp.");
+  };
   </script>
 </body>
 </html>
-
