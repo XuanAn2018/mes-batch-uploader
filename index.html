@@ -500,7 +500,7 @@
         updateStats(batchResults, total, currentBatchStart);
         
         if (queue.length > 0 && !isStopped) {
-          await new Promise(r => setTimeout(r, Math.random() * 1000 + 500));
+          await new Promise(r => setTimeout(r, Math.random() * 2000 + 4000));
         }
       }
 
@@ -580,3 +580,4 @@
   </script>
 </body>
 </html>
+
