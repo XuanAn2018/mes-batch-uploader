@@ -141,7 +141,7 @@
 <body>
 
   <div class="navbar">
-    <div class="brand"><span>⚡ MES PRO</span></div>
+    <div class="brand"><span>⚡ MES QR Scanner 🚀 </span></div>
     <div id="statusBadge" class="status-badge">Hệ thống sẵn sàng</div>
   </div>
 
@@ -349,10 +349,19 @@
       }
     }
 
+    // --- SỰ KIỆN CHỌN GÓI ĐƯỢC CẬP NHẬT ---
     document.getElementById('pkg').addEventListener('input', function(e) {
         const val = e.target.value.trim();
         const p = currentPackages.find(x => x.packageId === val);
-        if(p) appendLog(`🔹 Đã chọn gói: ${p.packageId}`, 'info');
+        if(p) {
+            // In tiêu đề gói
+            appendLog(`🔹 Đã chọn: ${p.packageId}`, 'info');
+            // In chi tiết từng dòng như yêu cầu
+            appendLog(`   • Line: ${p.lineName || 'N/A'}`, 'info');
+            appendLog(`   • Style: ${p.styleText || 'N/A'}`, 'info');
+            appendLog(`   • Target: ${p.target || 0}`, 'info');
+            appendLog(`   • Status: ${p.status || 'N/A'}`, 'info');
+        }
     });
 
     // Auto-reload triggers
