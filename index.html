@@ -166,8 +166,21 @@
     /* ========================================================================== */
     /* CSS CHO MODAL & CHI TIẾT PACKAGE */
     /* ========================================================================== */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.3s; backdrop-filter: blur(3px); }
-    .modal-overlay.open { opacity: 1; visibility: visible; }
+    .modal-overlay { 
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.7); z-index: 10000; 
+        display: flex; justify-content: center; align-items: center; 
+        opacity: 0; visibility: hidden; transition: 0.3s; backdrop-filter: blur(3px); 
+        
+        /* 🔥 SỬA LỖI QUAN TRỌNG: Cho phép click xuyên qua khi ẩn */
+        pointer-events: none; 
+    }
+    .modal-overlay.open { 
+        opacity: 1; visibility: visible; 
+        /* Bật lại click khi hiện */
+        pointer-events: auto; 
+    }
+
     .modal-box { background: white; width: 95%; max-width: 1100px; border-radius: 15px; box-shadow: 0 15px 50px rgba(0,0,0,0.4); display: flex; flex-direction: column; height: 90vh; overflow: hidden; transform: translateY(-20px); transition: transform 0.3s ease-out; }
     .modal-overlay.open .modal-box { transform: translateY(0); }
     .modal-header { padding: 15px 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%); color: white; border-radius: 15px 15px 0 0; }
@@ -178,7 +191,6 @@
     .detail-module { margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,0.05); background: white; }
     .detail-module-header { background: linear-gradient(90deg, #e3f2fd 0%, #bbdefb 100%); padding: 10px 18px; font-weight: bold; color: #1565c0; display: flex; justify-content: space-between; font-size: 14px; }
     
-    /* 🔥 CSS GRID MỚI CHO DÒNG CHI TIẾT */
     .detail-row { 
         display: grid; 
         grid-template-columns: 30px 1.5fr 1fr 1fr 1fr; /* Checkbox, Tên, MCID, IoT, Time */
@@ -261,7 +273,6 @@
             <div class="pkg-row"><span class="pkg-label">Status:</span> <span class="pkg-val" id="infoStatus">-</span></div>
             <div class="pkg-row"><span class="pkg-label">PO No:</span> <span class="pkg-val" id="infoPo">-</span></div>
             
-            <!-- 1. NÚT XEM CHI TIẾT ĐÃ CHUYỂN VÀO ĐÂY -->
             <button id="btnViewDetails" class="btn btn-info btn-sm" style="width: 100%; margin-top: 12px;" onclick="viewPackageDetails()">
                 <i class="fas fa-eye"></i> Xem & Copy Chi Tiết Package
             </button>
@@ -350,7 +361,6 @@
               <button class="btn btn-sm btn-danger" onclick="closeModal()" style="width: auto;"><i class="fas fa-times"></i></button>
           </div>
           
-          <!-- Bảng Header giả lập cho Grid -->
           <div style="padding: 10px 43px 10px 43px; background: #e2e8f0; font-weight: bold; font-size: 13px; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 10px; color: #475569;">
                <div>TÊN CÔNG ĐOẠN</div>
                <div>MCID (MÃ MÁY)</div>
@@ -365,8 +375,8 @@
           <div class="modal-footer">
               <div class="modal-actions-left">
                   <button class="btn btn-warning btn-sm" onclick="toggleSelectAllModal()"><i class="fas fa-check-double"></i> Chọn/Bỏ Hết</button>
-                  <button class="btn btn-danger btn-sm" onclick="processSelectedItems('REMOVE')"><i class="fas fa-trash"></i> Xóa Máy</button>
-                  <button class="btn btn-success btn-sm" onclick="processSelectedItems('FA')"><i class="fas fa-robot"></i> Gửi FA</button>
+                  <button class="btn btn-danger btn-sm" onclick="processSelectedItems('REMOVE', this)"><i class="fas fa-trash"></i> Xóa Máy</button>
+                  <button class="btn btn-success btn-sm" onclick="processSelectedItems('FA', this)"><i class="fas fa-robot"></i> Gửi FA</button>
               </div>
               <div class="modal-actions-right">
                   <button class="btn btn-info btn-sm" onclick="copyRemarks()"><i class="fas fa-quote-right"></i> Copy Tên</button>
@@ -612,7 +622,6 @@
     document.getElementById('btnReloadPkg').addEventListener('click', fetchPackages);
 
     /* ========== MAIN SCANNER FUNCTIONS ========== */
-    // (Giữ nguyên logic Scanner cũ, chỉ copy paste từ file cũ nếu cần, ở đây tập trung vào Modal mới)
     async function sendRequest({apiKey, pkg, opserial, mcid, processtype}) {
       let url = `${API_ENDPOINT}?mxpackage=${encodeURIComponent(pkg)}&opserial=${opserial}&mcid=${mcid}${processtype ? `&processtype=${processtype}` : ''}&apikey=${encodeURIComponent(apiKey)}`;
       if (turnstileToken && !isLocalhost) url += `&cf-turnstile-response=${encodeURIComponent(turnstileToken)}`;
@@ -643,10 +652,141 @@
     }
 
     async function runBatchProcess() {
-       // Logic Batch cũ, không thay đổi
-       // ... (Code cũ của bạn ở đây) ...
-       alert("Logic chạy Batch vẫn giữ nguyên như cũ.");
+      if (!turnstileToken && !isLocalhost) return alert("Vui lòng hoàn thành xác thực bảo mật ở góc màn hình!");
+      const apiKey = document.getElementById("apiKey").value.trim();
+      const pkg = document.getElementById("pkg").value.trim();
+      const rawLines = document.getElementById("list").value.split("\n").map(x => x.trim()).filter(Boolean);
+      if (!apiKey || !pkg || rawLines.length === 0) return alert("Thiếu dữ liệu đầu vào!");
+
+      batchResults = [];
+      document.getElementById("statSuccess").textContent = "0"; document.getElementById("statFailed").textContent = "0";
+      progressBar.style.width = "0%"; progressBar.textContent = "0%";
+      appendLog("--- BẮT ĐẦU CHẠY ---", "info");
+      setRunningState(true);
+      currentBatchStart = Date.now();
+
+      const queue = rawLines.map((line, idx) => {
+        const parts = line.split(",").map(x => x.trim());
+        return { apiKey, pkg, opserial: parts[0], mcid: parts[1], processtype: parts[2]||'', index: idx + 1 };
+      });
+
+      const total = queue.length;
+      let done = 0;
+
+      while (queue.length > 0) {
+        if (isStopped) break;
+        if (isPaused) { await new Promise(r => setTimeout(r, 500)); continue; }
+        if (!isLocalhost && (Date.now() - tokenTimestamp > TOKEN_MAX_AGE)) await refreshTurnstileToken();
+
+        const task = queue.shift();
+        if (!task.opserial || !task.mcid) { done++; continue; }
+
+        appendLog(`📤 [${task.index}/${total}] Gửi MCID: ${task.mcid}...`);
+        
+        let attempt = 0, result = null;
+        while (attempt < 3 && !isStopped) {
+          attempt++;
+          result = await sendRequest(task);
+          if (!result.ok && (result.status === 403 || result.status === 401) && !isLocalhost) {
+             appendLog(`⚠️ Token bị từ chối. Đang xin cấp lại...`, "warning");
+             await refreshTurnstileToken();
+             attempt--; continue;
+          }
+          if (result.ok) break;
+          if (attempt < 3) await new Promise(r => setTimeout(r, 1000));
+        }
+
+        const resObj = { ...task, status: result.ok ? "OK" : (result.error||result.status), success: result.ok, duration: result.duration };
+        batchResults.push(resObj);
+        done++;
+        const pct = Math.round((done/total)*100);
+        progressBar.style.width = `${pct}%`; progressBar.textContent = `${pct}%`;
+        if (result.ok) appendLog(`✅ OK (${result.duration}s)`, "success");
+        else appendLog(`❌ FAIL: ${resObj.status}`, "error");
+        updateStats(batchResults, total, currentBatchStart);
+        if (queue.length > 0 && !isStopped) await new Promise(r => setTimeout(r, Math.random() * 2000 + 4000));
+      }
+
+      setRunningState(false);
+      appendLog(`🏁 Hoàn tất trong ${formatTime(Date.now() - currentBatchStart)}.`);
+      if (window.turnstile && !isLocalhost) {
+          window.turnstile.reset('#cf-turnstile-widget');
+          turnstileToken = null;
+          btnRun.disabled = true; btnRun.innerHTML = "🔒 XÁC THỰC LẠI";
+          document.getElementById('turnstileStatus').textContent = "Cần xác thực";
+          document.getElementById('turnstileStatus').className = "turnstile-badge status-pending";
+          document.getElementById('minimizedIconChar').textContent = "🔐";
+          toggleWidgetState(false);
+          appendLog("🔒 Đã reset phiên bảo mật.", "warning");
+      }
     }
+    
+    function updateStats(results, total, startTime) {
+      const success = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success && r.status !== "STOPPED").length;
+      document.getElementById("statTotal").textContent = total;
+      document.getElementById("statSuccess").textContent = success;
+      document.getElementById("statFailed").textContent = failed;
+      const elapsedTime = (Date.now() - startTime) / 1000;
+      const rate = elapsedTime > 0 ? (results.length / elapsedTime).toFixed(2) : "0.0";
+      document.getElementById("statRate").textContent = rate;
+    }
+
+    function setRunningState(isRunning) {
+      btnRun.style.display = isRunning ? "none" : "block";
+      btnPause.style.display = isRunning ? "block" : "none";
+      btnStop.style.display = isRunning ? "block" : "none";
+      const inputs = ["apiKey", "factory", "dateSelect", "pkg", "btnReloadPkg", "list", "importBtn"];
+      inputs.forEach(id => document.getElementById(id).disabled = isRunning);
+      btnExport.disabled = isRunning || batchResults.length === 0;
+
+      if (isRunning) {
+        statusBadge.innerHTML = "⚡ Đang xử lý...";
+        statusBadge.style.color = "#f59e0b"; statusBadge.style.background = "rgba(245, 158, 11, 0.15)";
+      } else {
+        statusBadge.innerHTML = "✅ Sẵn sàng";
+        statusBadge.style.color = "#34d399"; statusBadge.style.background = "rgba(16, 185, 129, 0.15)";
+        isPaused = false; isStopped = false;
+        btnPause.textContent = "⏸️ Tạm Dừng"; btnPause.className = "btn btn-warning";
+      }
+    }
+
+    /* ========== BUTTON EVENTS ========== */
+    btnRun.onclick = runBatchProcess;
+    btnPause.onclick = () => { isPaused = !isPaused; btnPause.textContent = isPaused ? "▶️ Tiếp Tục" : "⏸️ Tạm Dừng"; btnPause.className = isPaused ? "btn btn-success" : "btn btn-warning"; };
+    btnStop.onclick = () => { if(confirm("Dừng hệ thống?")) isStopped = true; };
+    document.getElementById("testConnection").onclick = async () => {
+      const apiKey = document.getElementById("apiKey").value.trim();
+      if(!apiKey) return alert("Nhập API Key trước!");
+      if (!turnstileToken && !isLocalhost) return alert("Vui lòng xác thực bảo mật trước!");
+      appendLog("🔗 Đang Test kết nối...");
+      const res = await sendRequest({ apiKey, pkg: "TEST", opserial: "0", mcid: "TEST" });
+      if (res.status === 404 || res.status === 200 || res.ok) appendLog("✅ Server OK!", "success"); else appendLog(`❌ Lỗi: ${res.status||res.error}`, "error");
+    };
+    document.getElementById("importBtn").onclick = () => document.getElementById("fileInput").click();
+    document.getElementById("fileInput").onchange = (e) => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = (ev) => {
+        const l = ev.target.result.split('\n').filter(x=>x.trim().length>0);
+        const d = l[0].toLowerCase().includes('opserial') ? l.slice(1) : l;
+        document.getElementById("list").value = d.map(x=>x.replace(/\t/g,',')).join('\n');
+        appendLog(`📂 Đã load ${d.length} dòng.`, "success");
+      };
+      r.readAsText(f); e.target.value = '';
+    };
+    btnExport.onclick = () => { if(!batchResults.length) return; const csv = "Index,Opserial,Mcid,Type,Status,Duration\n" + batchResults.map(r=>`${r.index},${r.opserial},${r.mcid},${r.processtype},${r.status},${r.duration}`).join('\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:'text/csv'})); a.download = `MES_Report_${new Date().toISOString().slice(0,10)}.csv`; a.click(); };
+    document.getElementById("downloadTemplate").onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(["\uFEFFopserial,mcid,processtype\n1,MC001,QA\n2,MC002,FA"],{type:'text/csv'})); a.download = "template.csv"; a.click(); };
+    document.getElementById("clearLog").onclick = () => { logEl.innerHTML = ""; appendLog("Log Cleaned."); };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setTodayDate();
+        if(isLocalhost) {
+            btnRun.disabled = false; btnRun.innerHTML = "🚀 BẮT ĐẦU (Localhost)";
+            btnRun.style.opacity = "1"; btnRun.style.cursor = "pointer";
+            document.getElementById('turnstileWidget').style.display = 'none';
+        }
+    });
 
     /* ========================================================================== */
     /* LOGIC MODAL CHI TIẾT & QUẢN LÝ MÁY */
@@ -774,7 +914,7 @@
     }
 
     // Logic Xử lý Batch (Gửi FA hoặc Xóa) từ Modal
-    async function processSelectedItems(action) {
+    async function processSelectedItems(action, btnElement) {
         const checked = document.querySelectorAll('.serial-checkbox:checked');
         if(checked.length === 0) return alert("Vui lòng tích chọn máy cần xử lý!");
         
@@ -795,16 +935,14 @@
         let successCount = 0;
         
         // Hiển thị trạng thái loading tạm thời trên nút
-        const btn = event.target; // Lấy nút đang bấm
-        const originalText = btn.innerHTML;
-        btn.innerHTML = `<span class="loader" style="width:15px;height:15px;border-width:2px;"></span> Đang chạy...`;
-        btn.disabled = true;
+        const originalText = btnElement.innerHTML;
+        btnElement.innerHTML = `<span class="loader" style="width:15px;height:15px;border-width:2px;"></span> Đang chạy...`;
+        btnElement.disabled = true;
 
         for (const cb of checked) {
             const opserial = cb.value;
-            const mcid = cb.dataset.mcid || ""; // Nếu xóa máy thì có thể cần hoặc không, nhưng Remove API cần MCID nếu có
+            const mcid = cb.dataset.mcid || ""; 
             
-            // Nếu gửi FA mà không có MCID thì bỏ qua (hoặc báo lỗi)
             if (action === 'FA' && !mcid) {
                 console.warn(`Bỏ qua Op ${opserial} vì chưa có MCID`);
                 continue;
@@ -815,7 +953,6 @@
                 if (action === 'FA') {
                     url = `${API_ENDPOINT}?apikey=${apiKey}&mxpackage=${encodeURIComponent(pkg)}&mcid=${encodeURIComponent(mcid)}&opserial=${opserial}&processtype=FA`;
                 } else {
-                    // Action REMOVE
                     url = `${REMOVE_API}?apikey=${apiKey}&mxpackage=${encodeURIComponent(pkg)}&mcid=${encodeURIComponent(mcid)}&opserial=${opserial}`;
                 }
                 
@@ -826,7 +963,6 @@
 
                 if (json.IsSuccess) {
                     successCount++;
-                    // Hiệu ứng UI khi thành công
                     const row = document.getElementById(`row-${opserial}`);
                     if(action === 'REMOVE') {
                         row.style.opacity = '0.5'; 
@@ -843,8 +979,8 @@
             }
         }
         
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        btnElement.innerHTML = originalText;
+        btnElement.disabled = false;
         alert(`Hoàn tất! Thành công: ${successCount}/${checked.length}`);
     }
     
