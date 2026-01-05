@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MES QR Scanner Pro - Auto Refresh Token</title>
+  <title>MES QR Scanner Pro - Final Version</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- FONT AWESOME -->
@@ -171,16 +171,12 @@
         background: rgba(0,0,0,0.7); z-index: 10000; 
         display: flex; justify-content: center; align-items: center; 
         opacity: 0; visibility: hidden; transition: 0.3s; backdrop-filter: blur(3px); 
-        
-        /* 🔥 SỬA LỖI QUAN TRỌNG: Cho phép click xuyên qua khi ẩn */
-        pointer-events: none; 
+        pointer-events: none; /* Cho phép click xuyên qua khi ẩn */
     }
     .modal-overlay.open { 
         opacity: 1; visibility: visible; 
-        /* Bật lại click khi hiện */
-        pointer-events: auto; 
+        pointer-events: auto; /* Bật click khi hiện */
     }
-
     .modal-box { background: white; width: 95%; max-width: 1100px; border-radius: 15px; box-shadow: 0 15px 50px rgba(0,0,0,0.4); display: flex; flex-direction: column; height: 90vh; overflow: hidden; transform: translateY(-20px); transition: transform 0.3s ease-out; }
     .modal-overlay.open .modal-box { transform: translateY(0); }
     .modal-header { padding: 15px 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%); color: white; border-radius: 15px 15px 0 0; }
@@ -265,13 +261,18 @@
           </div>
           <datalist id="packageList"></datalist>
           
-          <!-- KHUNG HIỂN THỊ THÔNG TIN GÓI + NÚT XEM CHI TIẾT -->
+          <!-- KHUNG HIỂN THỊ THÔNG TIN GÓI -->
           <div id="pkgInfoCard" class="pkg-info-card">
             <div class="pkg-row"><span class="pkg-label">Line:</span> <span class="pkg-val" id="infoLine">-</span></div>
             <div class="pkg-row"><span class="pkg-label">Style:</span> <span class="pkg-val" id="infoStyle">-</span></div>
             <div class="pkg-row"><span class="pkg-label">Target:</span> <span class="pkg-val" id="infoTarget">-</span></div>
             <div class="pkg-row"><span class="pkg-label">Status:</span> <span class="pkg-val" id="infoStatus">-</span></div>
-            <div class="pkg-row"><span class="pkg-label">PO No:</span> <span class="pkg-val" id="infoPo">-</span></div>
+            
+            <!-- 🔥 THAY ĐỔI: PO NO -> MOBILE OUTPUT -->
+            <div class="pkg-row">
+                <span class="pkg-label">Mobile Output:</span> 
+                <span class="pkg-val" id="infoOutput" style="font-weight: 800;">-</span>
+            </div>
             
             <button id="btnViewDetails" class="btn btn-info btn-sm" style="width: 100%; margin-top: 12px;" onclick="viewPackageDetails()">
                 <i class="fas fa-eye"></i> Xem & Copy Chi Tiết Package
@@ -421,7 +422,7 @@
     const infoStyle = document.getElementById("infoStyle");
     const infoTarget = document.getElementById("infoTarget");
     const infoStatus = document.getElementById("infoStatus");
-    const infoPo = document.getElementById("infoPo");
+    const infoOutput = document.getElementById("infoOutput");
 
     /* ========== TURNSTILE WIDGET LOGIC ========== */
     const widgetEl = document.getElementById('turnstileWidget');
@@ -607,11 +608,44 @@
             infoStyle.textContent = p.styleText || "N/A";
             infoTarget.textContent = p.target || "0";
             infoStatus.textContent = p.status || "N/A";
-            infoPo.textContent = p.poNo || "N/A"; 
+            
             pkgInfoCard.classList.add('active');
             
             appendLog(`🔹 Đã chọn: ${p.packageId}`, 'info');
             appendLog(`• Line: ${p.lineName || 'N/A'}`, 'detail');
+
+            // 🔥 LOGIC MỚI: FETCH OUTPUT
+            infoOutput.innerHTML = '<span class="loader" style="width:12px;height:12px;border-width:2px;"></span>';
+            const apiKey = document.getElementById('apiKey').value;
+            
+            fetch(`${MODULE_API}?mxpackage=${p.packageId}&mode=summary&apikey=${apiKey}`)
+                .then(res => res.json())
+                .then(json => {
+                    if(json.success && json.data && json.data.summary) {
+                        const actual = json.data.summary.total_manual_input || 0;
+                        const target = parseInt(p.target) || 0;
+                        
+                        // Màu sắc trực quan
+                        let color = '#ef4444'; // Mặc định đỏ (0)
+                        let textSuffix = " (Chưa nhập)";
+                        
+                        if (actual > 0) {
+                            if (actual >= target && target > 0) {
+                                color = '#10b981'; // Xanh lá (Đủ)
+                                textSuffix = " (Đủ)";
+                            } else {
+                                color = '#f59e0b'; // Cam (Thiếu)
+                                textSuffix = ` (Thiếu ${target - actual})`;
+                            }
+                        }
+                        
+                        infoOutput.innerHTML = `<span style="color:${color}">${actual}${textSuffix}</span>`;
+                    } else {
+                        infoOutput.innerHTML = `<span style="color:#ef4444">0 (Chưa nhập)</span>`;
+                    }
+                })
+                .catch(() => { infoOutput.textContent = "Lỗi tải"; });
+
         } else {
             pkgInfoCard.classList.remove('active');
         }
@@ -856,22 +890,18 @@
     }
 
     async function fetchMachineDetailsBackground(apiKey, styleInfo, operations) {
-        // Chạy từng request một để tránh spam server quá mức, nhưng cập nhật UI ngay lập tức
         for (let op of operations) {
             try {
                 let url = `${MODULE_DETAIL_API}?stylecode=${styleInfo.stylecode}&stylesize=${styleInfo.stylesize}&stylecolorserial=${styleInfo.stylecolorserial}&revno=${styleInfo.revno}&oprevno=${op.oprevno}&opserial=${op.opserial}&apikey=${apiKey}`;
-                // Nếu cần token, thêm vào đây (tùy backend của bạn có yêu cầu read không)
-                
                 const res = await fetch(url);
                 const json = await res.json();
 
                 if (json.success && json.data?.Result?.MachineList?.length > 0) {
-                    const m = json.data.Result.MachineList[0]; // Lấy máy đầu tiên tìm thấy
+                    const m = json.data.Result.MachineList[0]; 
                     const row = document.getElementById(`row-${op.opserial}`);
                     if (row && m.MCID) {
-                        // Cập nhật DOM
                         const checkbox = row.querySelector('.serial-checkbox');
-                        checkbox.dataset.mcid = m.MCID; // Lưu MCID vào dataset để dùng khi xóa/FA
+                        checkbox.dataset.mcid = m.MCID; 
                         
                         row.querySelector('.mcid-col').innerHTML = `<span class="mcid-tag">${m.MCID}</span>`;
                         row.querySelector('.iot-col').innerHTML = `<span class="iot-data">${m.LAST_IOT_DATA || '-'}</span>`;
@@ -884,8 +914,6 @@
                     if (row) row.querySelector('.mcid-col').innerHTML = `<span style="color:#94a3b8; font-size:11px;">Trống</span>`;
                 }
             } catch (err) { console.warn("Lỗi fetch detail op:", op.opserial); }
-            
-            // Nghỉ xíu để không lag UI
             await new Promise(r => setTimeout(r, 50)); 
         }
     }
@@ -898,7 +926,6 @@
         cbs.forEach(c => c.checked = !allChecked);
     }
     
-    // Logic Copy chỉ lấy dòng đã tích
     function copySerials() {
         const checked = document.querySelectorAll('.serial-checkbox:checked');
         if(checked.length === 0) return alert("Vui lòng tích chọn ít nhất 1 dòng!");
@@ -913,12 +940,10 @@
         navigator.clipboard.writeText(txt).then(() => alert(`Đã copy ${checked.length} Tên công đoạn!`));
     }
 
-    // Logic Xử lý Batch (Gửi FA hoặc Xóa) từ Modal
     async function processSelectedItems(action, btnElement) {
         const checked = document.querySelectorAll('.serial-checkbox:checked');
         if(checked.length === 0) return alert("Vui lòng tích chọn máy cần xử lý!");
         
-        // Kiểm tra Token
         if (!turnstileToken && !isLocalhost) {
             alert("Vui lòng xác thực bảo mật (Turnstile) ở màn hình chính trước!");
             return;
@@ -934,7 +959,6 @@
 
         let successCount = 0;
         
-        // Hiển thị trạng thái loading tạm thời trên nút
         const originalText = btnElement.innerHTML;
         btnElement.innerHTML = `<span class="loader" style="width:15px;height:15px;border-width:2px;"></span> Đang chạy...`;
         btnElement.disabled = true;
@@ -971,7 +995,7 @@
                         cb.dataset.mcid = "";
                         row.querySelector('.mcid-col').innerHTML = '<span style="color:red">Đã xóa</span>';
                     } else {
-                        row.style.backgroundColor = '#dcfce7'; // Xanh nhạt báo hiệu FA gửi ok
+                        row.style.backgroundColor = '#dcfce7'; 
                     }
                 }
             } catch (e) {
