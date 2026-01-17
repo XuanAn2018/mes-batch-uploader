@@ -89,8 +89,6 @@
     .pkg-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     .pkg-label { color: #64748b; font-weight: 600; }
     .pkg-val { color: #0369a1; font-weight: 700; text-align: right; max-width: 65%; word-break: break-word;}
-    .status-cf { color: #10b981 !important; font-weight: 800; }
-    .status-ro { color: #f59e0b !important; font-weight: 800; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
     /* Buttons */
@@ -655,9 +653,6 @@
     let scanAbortController = null;
     let modalCurrentTab = 'tab-operations';
 
-    // BIẾN LƯU TRẠNG THÁI PACKAGE HIỆN TẠI
-    let currentPackageStatus = null;
-
     // UI Elements
     const logEl = document.getElementById("log");
     const progressBar = document.getElementById("progressBar");
@@ -752,7 +747,7 @@
 
     function parseMxPackage(mxpackage) {
         try {
-            const match = mxpackage.match(/([A-Z0-9]+)(\d{6})(?:_|$)/);
+            const match = mxpackage.match(/([A-Z0-9]+)(\d{6})(?=_|$)/);
             if (!match) return { success: false };
             const fullStr = match[0];
             const len = fullStr.length;
@@ -855,29 +850,7 @@
       finally { btnReload.disabled = false; btnReload.textContent = "🔄"; }
     }
 
-    // Hàm kiểm tra trạng thái package
-    async function getPackageStatus(packageId) {
-        const pkg = currentPackages.find(x => x.packageId === packageId);
-        return pkg ? pkg.status : null;
-    }
-
-    // Hàm kiểm tra và cảnh báo trạng thái RO
-    function checkPackageStatusAndWarn(status, packageId) {
-        if (status === "RO") {
-            appendLog(`⚠️ CẢNH BÁO: Gói ${packageId} đang ở trạng thái RO (Read Only).`, "warning");
-            appendLog("Hệ thống máy chủ sẽ không nhận lệnh khi gói ở trạng thái này.", "warning");
-            appendLog("Vui lòng đi CF (Confirm) gói trước khi gửi lệnh!", "warning");
-            return false;
-        } else if (status === "CF") {
-            appendLog(`✅ Gói ${packageId} đã được CF (Confirm), có thể gửi lệnh.`, "success");
-            return true;
-        } else {
-            appendLog(`ℹ️ Trạng thái gói: ${status || "Unknown"}`, "info");
-            return true; // Cho phép chạy nếu không phải RO
-        }
-    }
-
-    document.getElementById('pkg').addEventListener('input', async (e) => {
+    document.getElementById('pkg').addEventListener('input', (e) => {
         const val = e.target.value.trim();
         if(val.startsWith('──────')) { e.target.value = ''; return; }
 
@@ -886,32 +859,12 @@
             infoLine.textContent = p.lineName || "N/A";
             infoStyle.textContent = p.styleText || "N/A";
             infoTarget.textContent = p.target || "0";
-            
-            // Cập nhật trạng thái package
-            const status = p.status || "N/A";
-            infoStatus.textContent = status;
-            
-            // Áp dụng class CSS dựa trên trạng thái
-            infoStatus.classList.remove('status-cf', 'status-ro');
-            if (status === "CF") {
-                infoStatus.classList.add('status-cf');
-            } else if (status === "RO") {
-                infoStatus.classList.add('status-ro');
-            }
-            
-            currentPackageStatus = status; // Lưu trạng thái hiện tại
+            infoStatus.textContent = p.status || "N/A";
             
             pkgInfoCard.classList.add('active');
             
             appendLog(`🔹 Đã chọn: ${p.packageId}`, 'info');
             appendLog(`• Line: ${p.lineName || 'N/A'}`, 'detail');
-            appendLog(`• Status: ${status}`, 'detail');
-            
-            // Kiểm tra và cảnh báo nếu là RO
-            if (status === "RO") {
-                appendLog("⚠️ Gói đang ở trạng thái RO (Read Only).", "warning");
-                appendLog("Vui lòng đi CF gói trước khi gửi lệnh!", "warning");
-            }
 
             // 🔥 LOGIC MỚI: FETCH OUTPUT
             infoOutput.innerHTML = '<span class="loader" style="width:12px;height:12px;border-width:2px;"></span>';
@@ -947,7 +900,6 @@
 
         } else {
             pkgInfoCard.classList.remove('active');
-            currentPackageStatus = null;
         }
     });
 
@@ -986,90 +938,75 @@
     }
 
     async function runBatchProcess() {
-        if (!turnstileToken && !isLocalhost) return alert("Vui lòng hoàn thành xác thực bảo mật ở góc màn hình!");
-        const apiKey = document.getElementById("apiKey").value.trim();
-        const pkg = document.getElementById("pkg").value.trim();
-        const rawLines = document.getElementById("list").value.split("\n").map(x => x.trim()).filter(Boolean);
-        if (!apiKey || !pkg || rawLines.length === 0) return alert("Thiếu dữ liệu đầu vào!");
+      if (!turnstileToken && !isLocalhost) return alert("Vui lòng hoàn thành xác thực bảo mật ở góc màn hình!");
+      const apiKey = document.getElementById("apiKey").value.trim();
+      const pkg = document.getElementById("pkg").value.trim();
+      const rawLines = document.getElementById("list").value.split("\n").map(x => x.trim()).filter(Boolean);
+      if (!apiKey || !pkg || rawLines.length === 0) return alert("Thiếu dữ liệu đầu vào!");
 
-        // Kiểm tra trạng thái package trước khi chạy
-        const packageStatus = currentPackageStatus || await getPackageStatus(pkg);
+      batchResults = [];
+      document.getElementById("statSuccess").textContent = "0"; document.getElementById("statFailed").textContent = "0";
+      progressBar.style.width = "0%"; progressBar.textContent = "0%";
+      appendLog("--- BẮT ĐẦU CHẠY ---", "info");
+      setRunningState(true);
+      currentBatchStart = Date.now();
+
+      const queue = rawLines.map((line, idx) => {
+        const parts = line.split(",").map(x => x.trim());
+        return { apiKey, pkg, opserial: parts[0], mcid: parts[1], processtype: parts[2]||'', index: idx + 1 };
+      });
+
+      const total = queue.length;
+      let done = 0;
+
+      while (queue.length > 0) {
+        if (isStopped) break;
+        if (isPaused) { await new Promise(r => setTimeout(r, 500)); continue; }
+        if (!isLocalhost && (Date.now() - tokenTimestamp > TOKEN_MAX_AGE)) await refreshTurnstileToken();
+
+        const task = queue.shift();
+        if (!task.opserial || !task.mcid) { done++; continue; }
+
+        appendLog(`📤 [${task.index}/${total}] Gửi MCID: ${task.mcid}...`);
         
-        if (packageStatus === "RO") {
-            appendLog("❌ KHÔNG THỂ CHẠY: Gói đang ở trạng thái RO (Read Only).", "error");
-            appendLog("Vui lòng đi CF (Confirm) gói trước khi gửi lệnh!", "error");
-            alert("❌ KHÔNG THỂ CHẠY!\nGói đang ở trạng thái RO (Read Only).\nVui lòng đi CF gói trước khi gửi lệnh!");
-            return;
-        }
-        
-        if (packageStatus !== "CF") {
-            const confirmRun = confirm(`Gói đang ở trạng thái: ${packageStatus || "Unknown"}\nBạn vẫn muốn chạy không?`);
-            if (!confirmRun) return;
-        }
-
-        batchResults = [];
-        document.getElementById("statSuccess").textContent = "0"; document.getElementById("statFailed").textContent = "0";
-        progressBar.style.width = "0%"; progressBar.textContent = "0%";
-        appendLog("--- BẮT ĐẦU CHẠY ---", "info");
-        setRunningState(true);
-        currentBatchStart = Date.now();
-
-        const queue = rawLines.map((line, idx) => {
-            const parts = line.split(",").map(x => x.trim());
-            return { apiKey, pkg, opserial: parts[0], mcid: parts[1], processtype: parts[2]||'', index: idx + 1 };
-        });
-
-        const total = queue.length;
-        let done = 0;
-
-        while (queue.length > 0) {
-            if (isStopped) break;
-            if (isPaused) { await new Promise(r => setTimeout(r, 500)); continue; }
-            if (!isLocalhost && (Date.now() - tokenTimestamp > TOKEN_MAX_AGE)) await refreshTurnstileToken();
-
-            const task = queue.shift();
-            if (!task.opserial || !task.mcid) { done++; continue; }
-
-            appendLog(`📤 [${task.index}/${total}] Gửi MCID: ${task.mcid}...`);
-            
-            let attempt = 0, result = null;
-            while (attempt < 3 && !isStopped) {
-                attempt++;
-                result = await sendRequest(task);
-                if (!result.ok && (result.status === 403 || result.status === 401) && !isLocalhost) {
-                    appendLog(`⚠️ Token bị từ chối. Đang xin cấp lại...`, "warning");
-                    await refreshTurnstileToken();
-                    attempt--; continue;
-                }
-                if (result.ok) break;
-                if (attempt < 3) await new Promise(r => setTimeout(r, 1000));
-            }
-
-            const resObj = { ...task, status: result.ok ? "OK" : (result.error||result.status), success: result.ok, duration: result.duration };
-            batchResults.push(resObj);
-            done++;
-            const pct = Math.round((done/total)*100);
-            progressBar.style.width = `${pct}%`; progressBar.textContent = `${pct}%`;
-            if (result.ok) appendLog(`✅ OK (${result.duration}s)`, "success");
-            else appendLog(`❌ FAIL: ${resObj.status}`, "error");
-            updateStats(batchResults, total, currentBatchStart);
-            if (queue.length > 0 && !isStopped) await new Promise(r => setTimeout(r, Math.random() * 2000 + 4000));
+        let attempt = 0, result = null;
+        while (attempt < 3 && !isStopped) {
+          attempt++;
+          result = await sendRequest(task);
+          if (!result.ok && (result.status === 403 || result.status === 401) && !isLocalhost) {
+             appendLog(`⚠️ Token bị từ chối. Đang xin cấp lại...`, "warning");
+             await refreshTurnstileToken();
+             attempt--; continue;
+          }
+          if (result.ok) break;
+          if (attempt < 3) await new Promise(r => setTimeout(r, 1000));
         }
 
-        setRunningState(false);
-        appendLog(`🏁 Hoàn tất trong ${formatTime(Date.now() - currentBatchStart)}.`);
+        const resObj = { ...task, status: result.ok ? "OK" : (result.error||result.status), success: result.ok, duration: result.duration };
+        batchResults.push(resObj);
+        done++;
+        const pct = Math.round((done/total)*100);
+        progressBar.style.width = `${pct}%`; progressBar.textContent = `${pct}%`;
+        if (result.ok) appendLog(`✅ OK (${result.duration}s)`, "success");
+        else appendLog(`❌ FAIL: ${resObj.status}`, "error");
+        updateStats(batchResults, total, currentBatchStart);
+        if (queue.length > 0 && !isStopped) await new Promise(r => setTimeout(r, Math.random() * 2000 + 4000));
+      }
 
-        // Reset turnstile sau khi chạy xong
-        if (window.turnstile && !isLocalhost) {
-            window.turnstile.reset('#cf-turnstile-widget');
-            turnstileToken = null;
-            btnRun.disabled = true; btnRun.innerHTML = "🔒 XÁC THỰC LẠI";
-            document.getElementById('turnstileStatus').textContent = "Cần xác thực";
-            document.getElementById('turnstileStatus').className = "turnstile-badge status-pending";
-            document.getElementById('minimizedIconChar').textContent = "🔐";
-            toggleWidgetState(false);
-            appendLog("🔒 Đã reset phiên bảo mật.", "warning");
-        }
+      setRunningState(false);
+      appendLog(`🏁 Hoàn tất trong ${formatTime(Date.now() - currentBatchStart)}.`);
+
+      // Reset turnstile sau khi chạy xong
+      if (window.turnstile && !isLocalhost) {
+          window.turnstile.reset('#cf-turnstile-widget');
+          turnstileToken = null;
+          btnRun.disabled = true; btnRun.innerHTML = "🔒 XÁC THỰC LẠI";
+          document.getElementById('turnstileStatus').textContent = "Cần xác thực";
+          document.getElementById('turnstileStatus').className = "turnstile-badge status-pending";
+          document.getElementById('minimizedIconChar').textContent = "🔐";
+          toggleWidgetState(false);
+          appendLog("🔒 Đã reset phiên bảo mật.", "warning");
+      }
     }
     
     function updateStats(results, total, startTime) {
@@ -1189,103 +1126,67 @@
                     const isFA = op.iottype === 'FA';
                     const badgeClass = isFA ? 'badge-fa' : (op.iottype === 'QA' ? 'badge-qa' : 'badge-none');
                     
-                    // Tạo HTML cho mỗi operation - SỬA LẠI CẤU TRÚC CỘT
-                    html += `<div class="detail-row" id="row-${op.opserial}" style="border-left: 3px solid ${isFA?'#10b981':'#cbd5e1'}">
+                    html += `<label class="detail-row" id="row-${op.opserial}" style="border-left: 3px solid ${isFA?'#10b981':'#cbd5e1'}">
                         <input type="checkbox" class="serial-checkbox" value="${op.opserial}" data-mcid="" data-name="${op.remarks||op.opname}">
                         <div>
                             <div class="op-name">${op.remarks||op.opname}</div>
                             <span class="serial-tag">${op.opserial}</span>
                             <span class="type-badge ${badgeClass}">${op.iottype||'NONE'}</span>
                         </div>
-                        <div class="mcid-col" id="mcid-${op.opserial}"><span class="loader" style="width:12px;height:12px;border-width:2px;"></span></div>
-                        <div class="iot-col" id="iot-${op.opserial}">-</div>
-                        <div class="time-col" id="time-${op.opserial}">-</div>
-                    </div>`;
+                        <div class="mcid-col"><span class="loader" style="width:12px;height:12px;border-width:2px;"></span></div>
+                        <div class="iot-col">-</div>
+                        <div class="time-col">-</div>
+                    </label>`;
                 });
                 html += `</div>`;
             }
             content.innerHTML = html;
 
-            // Fetch details ngầm - SỬA LẠI ĐỂ LẤY ĐÚNG 3 GIÁ TRỊ
-            fetchMachineDetailsForOperations(apiKey, selectedPackageId, ops);
+            // Fetch details ngầm
+            const styleInfo = parseMxPackage(selectedPackageId);
+            if (styleInfo.success) {
+                fetchMachineDetailsBackground(apiKey, styleInfo, ops);
+            }
 
         } catch (e) { 
             content.innerHTML = `<p style="color:red; font-weight:bold; padding:20px;">Lỗi: ${e.message}</p>`; 
         }
     }
 
-    // Hàm mới: Lấy chi tiết máy cho danh sách operations
-    async function fetchMachineDetailsForOperations(apiKey, packageId, operations) {
-        const styleInfo = parseMxPackage(packageId);
-        if (!styleInfo.success) {
-            console.error("Không thể parse package:", packageId);
-            return;
-        }
-
-        // Fetch dữ liệu chi tiết cho từng operation
+    async function fetchMachineDetailsBackground(apiKey, styleInfo, operations) {
         for (let op of operations) {
             try {
-                const url = `${MODULE_DETAIL_API}?stylecode=${styleInfo.stylecode}&stylesize=${styleInfo.stylesize}&stylecolorserial=${styleInfo.stylecolorserial}&revno=${styleInfo.revno}&oprevno=${op.oprevno}&opserial=${op.opserial}&apikey=${apiKey}`;
+                let url = `${MODULE_DETAIL_API}?stylecode=${styleInfo.stylecode}&stylesize=${styleInfo.stylesize}&stylecolorserial=${styleInfo.stylecolorserial}&revno=${styleInfo.revno}&oprevno=${op.oprevno}&opserial=${op.opserial}&apikey=${apiKey}`;
                 const res = await fetch(url);
                 const json = await res.json();
 
                 if (json.success && json.data?.Result?.MachineList?.length > 0) {
                     const m = json.data.Result.MachineList[0]; 
-                    
-                    // Cập nhật MCID
-                    const mcidElement = document.getElementById(`mcid-${op.opserial}`);
-                    if (mcidElement && m.MCID) {
-                        mcidElement.innerHTML = `<span class="mcid-tag">${m.MCID}</span>`;
+                    const row = document.getElementById(`row-${op.opserial}`);
+                    if (row && m.MCID) {
+                        const checkbox = row.querySelector('.serial-checkbox');
+                        checkbox.dataset.mcid = m.MCID; 
                         
-                        // Cập nhật checkbox data
-                        const checkbox = document.querySelector(`#row-${op.opserial} .serial-checkbox`);
-                        if (checkbox) {
-                            checkbox.dataset.mcid = m.MCID;
-                        }
-                    }
-                    
-                    // Cập nhật IoT Data
-                    const iotElement = document.getElementById(`iot-${op.opserial}`);
-                    if (iotElement) {
-                        iotElement.innerHTML = `<span class="iot-data">${m.LAST_IOT_DATA || '-'}</span>`;
-                    }
-                    
-                    // Cập nhật Time
-                    const timeElement = document.getElementById(`time-${op.opserial}`);
-                    if (timeElement) {
-                        timeElement.innerHTML = `<span class="iot-time">${formatDateTime(m.LAST_IOT_DATA_RECEIVE_TIME)}</span>`;
+                        row.querySelector('.mcid-col').innerHTML = `<span class="mcid-tag">${m.MCID}</span>`;
+                        row.querySelector('.iot-col').innerHTML = `<span class="iot-data">${m.LAST_IOT_DATA || '-'}</span>`;
+                        row.querySelector('.time-col').innerHTML = `<span class="iot-time">${formatDateTime(m.LAST_IOT_DATA_RECEIVE_TIME)}</span>`;
+                    } else if (row) {
+                         row.querySelector('.mcid-col').innerHTML = `<span style="color:#94a3b8; font-size:11px;">Trống</span>`;
                     }
                 } else {
-                    // Nếu không có dữ liệu
-                    const mcidElement = document.getElementById(`mcid-${op.opserial}`);
-                    if (mcidElement) mcidElement.innerHTML = `<span style="color:#94a3b8; font-size:11px;">Trống</span>`;
+                    const row = document.getElementById(`row-${op.opserial}`);
+                    if (row) row.querySelector('.mcid-col').innerHTML = `<span style="color:#94a3b8; font-size:11px;">Trống</span>`;
                 }
-            } catch (err) { 
-                console.warn("Lỗi fetch detail op:", op.opserial, err);
-                
-                // Hiển thị lỗi nếu có
-                const mcidElement = document.getElementById(`mcid-${op.opserial}`);
-                if (mcidElement) mcidElement.innerHTML = `<span style="color:#ef4444; font-size:11px;">Lỗi</span>`;
-            }
-            await new Promise(r => setTimeout(r, 50)); // Delay để tránh rate limit
+            } catch (err) { console.warn("Lỗi fetch detail op:", op.opserial); }
+            await new Promise(r => setTimeout(r, 50)); 
         }
     }
 
-    /* ========== IOT SCAN FUNCTIONS (Từ remove-machine) ========== */
     /* ========== IOT SCAN FUNCTIONS (Từ remove-machine) ========== */
     async function startIotScan() {
         // Kiểm tra token trước khi bắt đầu
         if (!turnstileToken && !isLocalhost) {
             alert("Vui lòng hoàn thành xác thực bảo mật trước!");
-            return;
-        }
-
-        // Kiểm tra trạng thái package
-        const packageStatus = currentPackageStatus || await getPackageStatus(currentModalPackage);
-        if (packageStatus === "RO") {
-            modalLog("❌ KHÔNG THỂ QUÉT: Gói đang ở trạng thái RO (Read Only).", "error");
-            modalLog("Vui lòng đi CF (Confirm) gói trước khi quét IoT!", "error");
-            alert("❌ KHÔNG THỂ QUÉT!\nGói đang ở trạng thái RO (Read Only).\nVui lòng đi CF gói trước khi quét IoT!");
             return;
         }
 
@@ -1365,7 +1266,6 @@
                     }
                 } catch (err) {
                     console.warn(`Lỗi quét OP ${op.opserial}:`, err);
-                    modalLog(`⚠️ Lỗi quét OP ${op.opserial}: ${err.message}`, 'warning');
                 }
                 await new Promise(r => setTimeout(r, 100));
             }
@@ -1478,14 +1378,6 @@
     }
 
     async function processBatchAction(action) {
-        // Kiểm tra trạng thái package
-        const packageStatus = currentPackageStatus || await getPackageStatus(currentModalPackage);
-        if (packageStatus === "RO") {
-            modalLog(`❌ KHÔNG THỂ ${action}: Gói đang ở trạng thái RO (Read Only).`, "error");
-            alert(`❌ KHÔNG THỂ ${action}!\nGói đang ở trạng thái RO (Read Only).\nVui lòng đi CF gói trước!`);
-            return;
-        }
-
         const selected = discoveredMachines.filter(m => m.selected);
         if (selected.length === 0) {
             alert("Vui lòng chọn ít nhất một máy!");
@@ -1590,13 +1482,6 @@
         
         if (!turnstileToken && !isLocalhost) {
             alert("Vui lòng xác thực bảo mật (Turnstile) ở màn hình chính trước!");
-            return;
-        }
-
-        // Kiểm tra trạng thái package
-        const packageStatus = currentPackageStatus || await getPackageStatus(currentModalPackage);
-        if (packageStatus === "RO") {
-            alert("❌ KHÔNG THỂ XỬ LÝ!\nGói đang ở trạng thái RO (Read Only).\nVui lòng đi CF gói trước!");
             return;
         }
 
