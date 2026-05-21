@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MES QR Scanner Pro - Integrated Version</title>
+  <title>MES QR Scanner Pro V2.1 - Session Auth + IoT Enhanced</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- FONT AWESOME -->
@@ -104,11 +104,11 @@
     .pkg-info-card {
       background: #f0f9ff;
       border: 1px solid #bae6fd;
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 10px;
+      border-radius: 6px;
+      padding: 6px 10px;
+      margin-top: 8px;
       display: none; 
-      font-size: 0.9rem;
+      font-size: 0.78rem;
       transition: all 0.3s ease;
     }
     .pkg-info-card.cf-status {
@@ -121,7 +121,7 @@
       animation: pulse-red 2s infinite;
     }
     .pkg-info-card.active { display: block; animation: fadeIn 0.3s; }
-    .pkg-row { display: flex; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px dashed #e0f2fe; padding-bottom: 4px; }
+    .pkg-row { display: flex; justify-content: space-between; margin-bottom: 2px; border-bottom: 1px dashed #e0f2fe; padding-bottom: 2px; }
     .pkg-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     .pkg-label { color: #64748b; font-weight: 600; }
     .pkg-val { color: #0369a1; font-weight: 700; text-align: right; max-width: 65%; word-break: break-word;}
@@ -143,6 +143,7 @@
     .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
     .btn-purple { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
     .btn-cyan { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
+    .btn-amber { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
     .btn-slate { background: linear-gradient(135deg, #475569 0%, #1e293b 100%); }
     .btn-rose { background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); }
     .btn-info { background: linear-gradient(90deg, #00BCD4 0%, #00acc1 100%); color: white; }
@@ -165,10 +166,11 @@
       background: #0f172a; color: #e2e8f0; padding: 20px; border-radius: 12px;
       font-family: 'Consolas', monospace; font-size: 0.9rem; height: 500px; overflow-y: auto;
     }
-    .log-entry { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; }
-    .log-time { color: #64748b; min-width: 70px; font-size: 0.8rem; }
+    .log-entry { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; line-height: 1.2; }
+    .log-time { color: #64748b; width: 150px; flex-shrink: 0; font-size: 0.75rem; font-family: 'Consolas', monospace; }
+    .log-entry > :last-child { flex-grow: 1; min-width: 0; word-break: break-word; }
     .log-success { color: #4ade80; } .log-error { color: #f87171; } .log-info { color: #60a5fa; } .log-warning { color: #facc15; }
-    .log-detail { color: #cbd5e1; font-style: italic; margin-left: 20px; display: block; width: 100%; font-size: 0.85rem;}
+    .log-detail { color: #cbd5e1; font-style: italic; font-size: 0.85rem; }
 
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); } 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); } }
     .btn-pulse { animation: pulse 2s infinite; }
@@ -292,6 +294,11 @@
     }
     
     .serial-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6; }
+    .iot-modal-row { cursor: pointer; transition: background 0.15s; }
+    .iot-modal-row:hover { background: #f0f7ff; }
+    .iot-modal-row.selected { background: #ecfdf5; box-shadow: inset 3px 0 0 #10b981; }
+    .iot-modal-row td { padding: 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .iot-modal-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #3b82f6; }
     .op-name { font-weight: 600; color: #333; }
     
     /* Action buttons trong danh sách */
@@ -411,23 +418,67 @@
     /* Log Console trong Modal */
     .modal-log-console {
         background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 8px;
-        font-family: monospace; font-size: 11px; max-height: 150px; overflow-y: auto;
+        font-family: monospace; font-size: 11px; max-height: 220px; overflow-y: auto;
         margin-top: 15px; border: 1px solid #334155;
     }
-    .modal-log-entry { margin-bottom: 3px; display: flex; gap: 8px; border-bottom: 1px solid #1e293b; padding-bottom: 2px; }
-    .modal-log-time { color: #64748b; min-width: 50px; font-size: 10px; }
+    .modal-log-entry { 
+        display: grid; grid-template-columns: 78px 1fr; gap: 10px;
+        border-bottom: 1px solid #1e293b; padding: 3px 0; line-height: 1.2;
+    }
+    .modal-log-time { color: #94a3b8; font-size: 10px; white-space: nowrap; }
     .modal-log-success { color: #4ade80; }
     .modal-log-error { color: #f87171; }
     .modal-log-info { color: #60a5fa; }
     .modal-log-warning { color: #facc15; }
+
+    .iot-modal-notice {
+        display: none;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 12px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        border: 1px solid #bfdbfe;
+        background: #eff6ff;
+        color: #1e40af;
+        font-size: 12px;
+        line-height: 1.35;
+        animation: fadeIn 0.2s ease;
+    }
+    .iot-modal-notice.show { display: flex; }
+    .iot-modal-notice.success { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .iot-modal-notice.warning { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .iot-modal-notice.error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+
+    .iot-package-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px 10px;
+        font-size: 11px;
+        align-items: center;
+    }
+    .iot-summary-item {
+        display: inline-flex;
+        gap: 3px;
+        padding: 1px 6px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        white-space: nowrap;
+    }
+    .iot-summary-label { color: #64748b; font-weight: 600; }
+    .iot-summary-value { color: #0f172a; font-weight: 600; }
+    .sort-icon.active { opacity: 1 !important; color: #2563eb; }
     
     .modal-footer { 
-        padding: 15px 25px; border-top: 1px solid #eee; 
-        display: flex; gap: 10px; justify-content: space-between; 
+        padding: 10px 20px; border-top: 1px solid #eee; 
+        display: flex; gap: 10px; justify-content: flex-end; 
+        align-items: center;
         background: #fff; border-radius: 0 0 15px 15px; flex-wrap: wrap; 
     }
     
-    .modal-actions-left, .modal-actions-right { display: flex; gap: 8px; flex-wrap: wrap; }
+    .modal-actions-left { margin-right: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .modal-actions-right { display: flex; gap: 8px; flex-wrap: wrap; }
     
     /* Tags & Badges */
     .serial-tag { background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-family: monospace; color: #475569; border: 1px solid #cbd5e1; display: inline-block;}
@@ -490,14 +541,161 @@
     .toast-icon {
         font-size: 20px;
     }
-    .toast-warning .toast-icon { color: #f59e0b; }
-    .toast-success .toast-icon { color: #10b981; }
+.toast-warning .toast-icon { color: #f59e0b; }
+.toast-success .toast-icon { color: #10b981; }
+
+    /* ========== AUTH GATE ========== */
+    .auth-gate {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 99999;
+        background: rgba(15, 23, 42, 0.85);
+        backdrop-filter: blur(8px);
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; visibility: hidden;
+        transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    .auth-gate.active {
+        opacity: 1; visibility: visible;
+    }
+    .auth-card {
+        background: white;
+        border-radius: 20px;
+        width: 400px;
+        max-width: 92vw;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+        overflow: hidden;
+        transform: translateY(20px);
+        transition: transform 0.4s ease;
+    }
+    .auth-gate.active .auth-card {
+        transform: translateY(0);
+    }
+    .auth-header {
+        padding: 35px 30px 20px;
+        text-align: center;
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        color: white;
+    }
+    .auth-header .auth-icon {
+        font-size: 40px;
+        margin-bottom: 10px;
+        color: #3b82f6;
+    }
+    .auth-header .auth-title {
+        font-size: 1.3rem;
+        font-weight: 800;
+        margin-bottom: 5px;
+    }
+    .auth-header .auth-subtitle {
+        font-size: 0.8rem;
+        color: #94a3b8;
+    }
+    .auth-body {
+        padding: 30px;
+    }
+    .auth-field {
+        margin-bottom: 18px;
+    }
+    .auth-field label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 6px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #475569;
+    }
+    .auth-field input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: border-color 0.2s;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .auth-field input:focus {
+        border-color: #3b82f6;
+    }
+    .auth-error {
+        color: #ef4444;
+        font-size: 0.85rem;
+        margin-bottom: 15px;
+        min-height: 20px;
+        font-weight: 600;
+    }
+    .auth-btn {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: filter 0.2s, transform 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    .auth-btn:hover {
+        filter: brightness(110%);
+        transform: translateY(-1px);
+    }
+    .auth-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+    }
+    .auth-footer {
+        padding: 15px 30px;
+        text-align: center;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        border-top: 1px solid #f1f5f9;
+        background: #f8fafc;
+    }
   </style>
 </head>
 <body>
 
+  <!-- AUTH GATE OVERLAY -->
+  <div id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-icon"><i class="fas fa-shield-alt"></i></div>
+        <div class="auth-title">MES QR Scanner Pro</div>
+        <div class="auth-subtitle">Hệ thống quét mã vạch thông minh</div>
+      </div>
+      <div class="auth-body">
+        <div class="auth-field">
+          <label><i class="fas fa-user"></i> Tài khoản</label>
+          <input type="text" id="authUsername" placeholder="Nhập tài khoản..." autocomplete="username">
+        </div>
+        <div class="auth-field">
+          <label><i class="fas fa-lock"></i> Mật khẩu</label>
+          <input type="password" id="authPassword" placeholder="Nhập mật khẩu..." autocomplete="current-password">
+        </div>
+        <div id="authError" class="auth-error"></div>
+        <button id="authLoginBtn" class="auth-btn" onclick="handleAuthLogin()">
+          <i class="fas fa-shield-alt"></i> Đăng Nhập
+        </button>
+      </div>
+      <div class="auth-footer">
+        Secure by Cloudflare Workers
+      </div>
+    </div>
+  </div>
+
   <div class="navbar">
-    <div class="brand"><span>⚡ MES QR Scanner Pro v1.1🚀 </span></div>
+    <div class="brand">
+      <span>⚡ MES QR Scanner Pro v2.1 🚀</span>
+      <span style="font-size:0.7rem; background:linear-gradient(135deg, #10b981 0%, #059669 100%); padding:2px 8px; border-radius:4px; margin-left:8px; font-weight:700;">Auth + IoT</span>
+    </div>
+    <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Session Auth + Smart Opserial + Type Dropdown + From-To Select + Sortable Table</div>
     <div id="statusBadge" class="status-badge">Hệ thống sẵn sàng</div>
   </div>
 
@@ -553,8 +751,8 @@
                 <span class="pkg-val" id="infoOutput" style="font-weight: 800;">-</span>
             </div>
             
-            <button id="btnViewDetails" class="btn btn-info btn-sm" style="width: 100%; margin-top: 12px;" onclick="openPackageManagement()">
-                <i class="fas fa-server"></i> Mở Quản Lý Package Nâng Cao
+            <button id="btnViewDetails" class="btn btn-info btn-xs" style="width: 100%; margin-top: 6px;" onclick="openPackageManagement()">
+                <i class="fas fa-server"></i> Mở Quản Lý Package
             </button>
           </div>
         </div>
@@ -563,6 +761,7 @@
           <label>Dữ liệu (Opserial, MCID, Type)</label>
           <div class="form-row" style="margin-bottom: 10px;">
             <button id="importBtn" class="btn btn-purple btn-sm" style="flex:1;">📂 Mở File</button>
+            <button id="autoFillBtn" class="btn btn-amber btn-sm" style="flex:1;">🔍 Chọn máy IoT</button>
             <button id="downloadTemplate" class="btn btn-cyan btn-sm" style="flex:1;">📥 Tải Mẫu</button>
             <input type="file" id="fileInput" accept=".csv,.txt" style="display:none">
           </div>
@@ -797,6 +996,138 @@
       </div>
   </div>
 
+  <!-- MODAL CHỌN MÁY IoT -->
+  <div class="modal-overlay" id="iotMachineModal">
+      <div class="modal-box" style="max-width: 950px;">
+          <div class="modal-header">
+              <h3><i class="fas fa-microchip"></i> Chọn máy từ IoT</h3>
+              <div style="display:flex; gap:8px; align-items:center;">
+                  <button class="btn btn-sm btn-slate" onclick="refreshIotMachineModal()" title="Làm mới dữ liệu">
+                      <i class="fas fa-sync-alt"></i>
+                  </button>
+                  <button class="btn btn-sm btn-danger" onclick="closeIotMachineModal()" style="width: auto;"><i class="fas fa-times"></i></button>
+              </div>
+          </div>
+          
+          <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+              <div style="position: sticky; top: 0; background: white; z-index: 10; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; margin-bottom: 12px;">
+                  <div class="form-row" style="gap: 8px;">
+                      <div style="flex:1;">
+                          <label style="font-size:12px; color:#64748b;">Factory</label>
+                          <select id="iotModalFactoryFilter" onchange="applyIotModalFilters()" style="padding:6px 10px; font-size:13px; width:100%;">
+                              <option value="">Tất cả</option>
+                          </select>
+                      </div>
+                      <div style="flex:1;">
+                          <label style="font-size:12px; color:#64748b;">Line</label>
+                          <select id="iotModalLineFilter" onchange="applyIotModalFilters()" style="padding:6px 10px; font-size:13px; width:100%;">
+                              <option value="">Tất cả</option>
+                          </select>
+                      </div>
+                      <div style="flex:1;">
+                          <label style="font-size:12px; color:#64748b;">Status</label>
+                          <select id="iotModalStatusFilter" onchange="applyIotModalFilters()" style="padding:6px 10px; font-size:13px; width:100%;">
+                              <option value="">Tất cả</option>
+                              <option value="ONLINE">ONLINE</option>
+                              <option value="OFFLINE">OFFLINE</option>
+                          </select>
+                      </div>
+                      <div style="flex:1;">
+                          <label style="font-size:12px; color:#64748b;">MXPACKAGE</label>
+                          <select id="iotModalMxpkgFilter" onchange="applyIotModalFilters()" style="padding:6px 10px; font-size:13px; width:100%;">
+                              <option value="">Tất cả</option>
+                              <option value="empty">Trống (chưa gán)</option>
+                              <option value="has">Đã có</option>
+                          </select>
+                      </div>
+                      <div style="display:flex; align-items:flex-end; gap:4px;">
+                          <button class="btn btn-sm btn-slate" onclick="selectAllIotMachines(true)" style="width:auto;">Chọn all</button>
+                          <button class="btn btn-sm btn-slate" onclick="selectAllIotMachines(false)" style="width:auto;">Bỏ all</button>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- Thống kê số lượng máy và opserial -->
+              <div style="padding: 10px 15px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 8px; margin-bottom: 12px; border: 1px solid #bae6fd;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                      <span style="font-weight: 700; color: #0369a1; font-size: 14px;">
+                          <i class="fas fa-server"></i> Tìm thấy: <span id="iotModalCount" style="color: #0284c7;">0 máy</span>
+                      </span>
+                      <!-- Package info block replaces Random button position -->
+                      <div style="display: flex; gap: 10px; font-size: 11px; color: #475569; background: white; padding: 4px 10px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                          <span><strong>Package:</strong> <span id="iotModalPkgId" style="color:#0369a1;">-</span></span>
+                          <span><strong>Line:</strong> <span id="iotModalPkgLine" style="color:#0369a1;">-</span></span>
+                          <span><strong>Style:</strong> <span id="iotModalPkgStyle" style="color:#0369a1;">-</span></span>
+                          <span><strong>Target:</strong> <span id="iotModalPkgTarget" style="color:#0369a1;">-</span></span>
+                      </div>
+                  </div>
+                  <div style="display: flex; gap: 15px; font-size: 12px;">
+                      <span style="color: #64748b;">
+                          <i class="fas fa-list-ol"></i> Opserial khả dụng: 
+                          <strong id="iotModalOpserialAvailable" style="color: #0891b2;">0</strong>
+                      </span>
+                      <span style="color: #64748b;">
+                          <i class="fas fa-check-square"></i> Đã chọn: 
+                          <strong id="iotModalSelectedCount" style="color: #f59e0b;">0</strong>
+                      </span>
+                  </div>
+              </div>
+
+              <div id="iotModalNotice" class="iot-modal-notice">
+                  <i id="iotModalNoticeIcon" class="fas fa-info-circle"></i>
+                  <div>
+                      <div id="iotModalNoticeTitle" style="font-weight:700; margin-bottom:2px;">Thông tin</div>
+                      <div id="iotModalNoticeMessage">Sẵn sàng chọn máy.</div>
+                  </div>
+              </div>
+
+              <div style="overflow-x: auto;">
+                  <table id="iotMachineTable" style="width:100%; border-collapse: collapse; font-size:12px;">
+                      <thead>
+                          <tr style="background:#f1f5f9;">
+                              <th style="padding:8px; text-align:center; width:36px;">☐</th>
+                              <th style="padding:8px; text-align:center; width:80px;">Type</th>
+                              <th data-column="machineid" onclick="sortIotTable('machineid')" style="padding:8px; text-align:left; cursor:pointer; user-select:none;">MachineId <i class="fas fa-sort sort-icon" style="margin-left:4px; font-size:0.8em; opacity:0.5;"></i></th>
+                              <th data-column="factory" onclick="sortIotTable('factory')" style="padding:8px; text-align:left; cursor:pointer; user-select:none;">Factory <i class="fas fa-sort sort-icon" style="margin-left:4px; font-size:0.8em; opacity:0.5;"></i></th>
+                              <th data-column="line" onclick="sortIotTable('line')" style="padding:8px; text-align:left; cursor:pointer; user-select:none;">Line <i class="fas fa-sort sort-icon" style="margin-left:4px; font-size:0.8em; opacity:0.5;"></i></th>
+                              <th data-column="status" onclick="sortIotTable('status')" style="padding:8px; text-align:center; cursor:pointer; user-select:none;">Status <i class="fas fa-sort sort-icon" style="margin-left:4px; font-size:0.8em; opacity:0.5;"></i></th>
+                              <th data-column="curroutput" onclick="sortIotTable('curroutput')" style="padding:8px; text-align:right; cursor:pointer; user-select:none;">CurrOutput <i class="fas fa-sort sort-icon" style="margin-left:4px; font-size:0.8em; opacity:0.5;"></i></th>
+                              <th data-column="mototime" onclick="sortIotTable('mototime')" style="padding:8px; text-align:right; cursor:pointer; user-select:none;">MotoTime <i class="fas fa-sort sort-icon" style="margin-left:4px; font-size:0.8em; opacity:0.5;"></i></th>
+                              <th data-column="lastteaching" onclick="sortIotTable('lastteaching')" style="padding:8px; text-align:left; cursor:pointer; user-select:none;">LastTeaching <i class="fas fa-sort sort-icon" style="margin-left:4px; font-size:0.8em; opacity:0.5;"></i></th>
+                              <th data-column="mxpackage" onclick="sortIotTable('mxpackage')" style="padding:8px; text-align:left; cursor:pointer; user-select:none;">MXPACKAGE <i class="fas fa-sort sort-icon" style="margin-left:4px; font-size:0.8em; opacity:0.5;"></i></th>
+                          </tr>
+                      </thead>
+                      <tbody id="iotMachineTableBody"></tbody>
+                  </table>
+              </div>
+              
+              <div id="iotModalEmpty" style="display:none; padding:30px; text-align:center; color:#94a3b8;">
+                  <i class="fas fa-search" style="font-size:32px; margin-bottom:10px;"></i>
+                  <p>Không tìm thấy máy phù hợp</p>
+              </div>
+          </div>
+          
+          <div class="modal-footer" style="display: flex; gap: 10px; align-items: center; justify-content: flex-end;">
+              <!-- From - To range selection -->
+              <div style="display: flex; gap: 6px; align-items: center; margin-right: auto;">
+                  <input type="number" id="iotRangeFrom" min="0" placeholder="From" style="width: 70px; padding: 6px 8px; font-size: 13px; border: 2px solid #cbd5e1; border-radius: 6px;">
+                  <span style="color: #64748b; font-weight: 600;">—</span>
+                  <input type="number" id="iotRangeTo" min="0" placeholder="To" style="width: 70px; padding: 6px 8px; font-size: 13px; border: 2px solid #cbd5e1; border-radius: 6px;">
+                  <button class="btn btn-warning btn-xs" onclick="selectMachinesByRange()" style="width: auto; padding: 6px 12px;">
+                      <i class="fas fa-arrows-alt-h"></i> Chọn theo khoảng
+                  </button>
+              </div>
+              <!-- Action buttons -->
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button class="btn btn-primary btn-sm" onclick="addSelectedIotMachines()" id="btnAddToTextarea">
+                      <i class="fas fa-plus"></i> Thêm vào textarea (<span id="btnAddCount">0</span>)
+                  </button>
+                  <button class="btn btn-rose btn-sm" onclick="closeIotMachineModal()">Đóng</button>
+              </div>
+          </div>
+      </div>
+  </div>
+
   <script>
     /* ========== CẤU HÌNH & VARIABLES ========== */
     const API_ENDPOINT = "https://mes-qr-scanner.chiscoong-cloudflare-com.workers.dev/";
@@ -804,7 +1135,21 @@
     const MODULE_API = "https://module-requests.chiscoong-cloudflare-com.workers.dev/opdetails";
     const MODULE_DETAIL_API = "https://module-requests.chiscoong-cloudflare-com.workers.dev/detail";
     const REMOVE_API = "https://remove-machine.chiscoong-cloudflare-com.workers.dev/remove-machine";
+    const IOT_STATUS_API = "https://iot-status.vercel.app/";
+    // Auth Worker endpoints
+    const WORKER_AUTH_BASE = "https://auth-password-gate.chiscoong-cloudflare-com.workers.dev";
+    const WORKER_AUTH_PROJECT = "scanqr";
+    const WORKER_LOGIN_ENDPOINT = `${WORKER_AUTH_BASE}/scanqr/verify`;
+    const WORKER_VALIDATE_ENDPOINT = `${WORKER_AUTH_BASE}/scanqr/validate-session`;
     
+    // BIẾN CHO MODAL IoT
+    let iotModalData = [];
+    let iotModalFilteredData = [];
+    let iotModalAvailableOpserials = 0; // Số opserial khả dụng (bỏ qua opserial 1)
+    let iotModalPackageOperations = []; // Danh sách operations từ package
+    // Sort state for IoT machine table
+    let currentSort = { column: null, asc: true };
+
     // 🔥 Cấu hình Token sống 4.5 phút (270s)
     const TOKEN_MAX_AGE = 270 * 1000; 
 
@@ -814,7 +1159,8 @@
     let turnstileToken = null;
     let tokenTimestamp = 0; 
     let tokenRefreshResolver = null; 
-    let isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const LOCAL_HOSTS = ['localhost', '127.0.0.1', '::1', ''];
+    let isLocalhost = window.location.protocol === 'file:' || LOCAL_HOSTS.includes(window.location.hostname);
 
     // BIẾN MỚI CHO MODAL QUẢN LÝ PACKAGE
     let currentModalPackage = null;
@@ -870,6 +1216,17 @@
       else widgetEl.classList.toggle('minimized');
     }
 
+    function unlockRunButton(label = "🚀 BẮT ĐẦU CHẠY") {
+      btnRun.disabled = false;
+      btnRun.style.opacity = "1";
+      btnRun.style.cursor = "pointer";
+      btnRun.innerHTML = label;
+    }
+
+    function hideTurnstileWidget() {
+      if (widgetEl) widgetEl.classList.add('minimized');
+    }
+
     btnMinimize.addEventListener('click', (e) => { e.stopPropagation(); toggleWidgetState(true); });
     widgetEl.addEventListener('click', () => { if (widgetEl.classList.contains('minimized')) toggleWidgetState(false); });
 
@@ -879,16 +1236,16 @@
         document.getElementById('turnstileStatus').textContent = "Đã xác thực";
         document.getElementById('turnstileStatus').className = "turnstile-badge status-success";
         document.getElementById('minimizedIconChar').textContent = "✅";
-        btnRun.disabled = false; btnRun.style.opacity = "1"; btnRun.style.cursor = "pointer"; btnRun.innerHTML = "🚀 BẮT ĐẦU CHẠY";
+        unlockRunButton();
 
         if (tokenRefreshResolver) {
             appendLog("♻️ Đã gia hạn Token thành công! Tự động chạy tiếp...", "success");
             tokenRefreshResolver(true); 
             tokenRefreshResolver = null;
-            setTimeout(() => toggleWidgetState(true), 1000);
+            setTimeout(hideTurnstileWidget, 1000);
         } else {
             appendLog("✅ Đã xác thực bảo mật thành công.", "success");
-            setTimeout(() => toggleWidgetState(true), 1500);
+            setTimeout(hideTurnstileWidget, 1500);
         }
     };
 
@@ -907,6 +1264,85 @@
             appendLog("⚠️ Phiên xác thực hết hạn.", "warning");
         }
     };
+
+    /* ========== AUTH SESSION MANAGEMENT ========== */
+    function lockApp() {
+        const gate = document.getElementById('authGate');
+        if (gate) gate.classList.add('active');
+    }
+
+    function unlockApp() {
+        const gate = document.getElementById('authGate');
+        if (gate) gate.classList.remove('active');
+    }
+
+    async function checkSessionSession() {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            lockApp();
+            return;
+        }
+        try {
+            const res = await fetch(WORKER_VALIDATE_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                unlockApp();
+                logWithTimestamp('🔐 Phiên làm việc hợp lệ. Chào mừng trở lại!', 'success');
+            } else {
+                localStorage.removeItem('auth_token');
+                lockApp();
+                logWithTimestamp('⚠️ Phiên làm việc đã hết hạn hoặc bị thu hồi từ máy chủ. Vui lòng đăng nhập lại.', 'warning');
+            }
+        } catch (e) {
+            // Network error — allow access in case of offline / dev mode
+            unlockApp();
+            logWithTimestamp('⚠️ Không thể kiểm tra phiên làm việc. Chế độ offline.', 'warning');
+        }
+    }
+
+    async function handleAuthLogin() {
+        const username = document.getElementById('authUsername').value.trim();
+        const password = document.getElementById('authPassword').value;
+        const errorEl = document.getElementById('authError');
+        const btn = document.getElementById('authLoginBtn');
+
+        if (!username || !password) {
+            errorEl.textContent = 'Vui lòng nhập tài khoản và mật khẩu.';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xác thực...';
+        errorEl.textContent = '';
+
+        try {
+            const res = await fetch(WORKER_LOGIN_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+
+            if (data.success && data.token) {
+                localStorage.setItem('auth_token', data.token);
+                unlockApp();
+                logWithTimestamp(`🔐 Đăng nhập thành công. Chào mừng ${data.user}!`, 'success');
+            } else {
+                errorEl.textContent = data.msg || 'Sai tài khoản hoặc mật khẩu.';
+            }
+        } catch (e) {
+            errorEl.textContent = 'Lỗi kết nối máy chủ xác thực.';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-shield-alt"></i> Đăng Nhập';
+        }
+    }
 
     /* ========== HELPER FUNCTIONS ========== */
     function formatTime(ms) {
@@ -928,12 +1364,37 @@
       const div = document.createElement('div');
       div.className = 'log-entry';
       if (type === 'detail') {
-          div.innerHTML = `<span style="width:70px; display:inline-block"></span><span class="${colorClass}">${message}</span>`;
+          div.innerHTML = `<span style="width:70px; flex-shrink:0; display:inline-block"></span><span class="${colorClass}">${message}</span>`;
       } else {
           div.innerHTML = `<span class="log-time">${timeStr}</span> <span class="${colorClass}">${message}</span>`;
       }
       logEl.appendChild(div);
       logEl.scrollTop = logEl.scrollHeight;
+    }
+    
+    // Hàm log với timestamp chi tiết hơn
+    function logWithTimestamp(message, type = 'info') {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('vi-VN');
+        const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const fullTime = `${dateStr} ${timeStr}`;
+        
+        let icon = 'ℹ️';
+        let colorClass = 'log-info';
+        let category = 'INFO';
+        
+        if (type === 'error') { icon = '❌'; colorClass = 'log-error'; category = 'ERROR'; }
+        else if (type === 'success') { icon = '✅'; colorClass = 'log-success'; category = 'SUCCESS'; }
+        else if (type === 'warning') { icon = '⚠️'; colorClass = 'log-warning'; category = 'WARNING'; }
+        else if (type === 'detail') { icon = '📋'; colorClass = 'log-detail'; category = 'DETAIL'; }
+        
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        div.innerHTML = `<span class="log-time">[${fullTime}]</span> <span class="${colorClass}">[${category}] ${message}</span>`;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+        
+        console.log(`[${fullTime}] [${category}] ${message}`);
     }
 
     /* ========== FIXED: PARSE MXPACKAGE FUNCTION ========== */
@@ -1132,7 +1593,9 @@
             pkgInfoCard.classList.add('active');
             
             appendLog(`🔹 Đã chọn: ${p.packageId}`, 'info');
-            appendLog(`• Line: ${p.lineName || 'N/A'}`, 'detail');
+            appendLog(`Line: ${p.lineName || 'N/A'}`, 'detail');
+            appendLog(`Style: ${p.styleText || 'N/A'}`, 'detail');
+            appendLog(`Target: ${p.target || '0'}`, 'detail');
 
             // 🔥 LOGIC MỚI: FETCH OUTPUT
             infoOutput.innerHTML = '<span class="loader" style="width:12px;height:12px;border-width:2px;"></span>';
@@ -2045,8 +2508,18 @@
         if (type === 'error') colorClass = 'modal-log-error';
         else if (type === 'success') colorClass = 'modal-log-success';
         else if (type === 'warning') colorClass = 'modal-log-warning';
-        
-        el.innerHTML += `<div class="modal-log-entry"><span class="modal-log-time">[${time}]</span><span class="${colorClass}">${msg}</span></div>`;
+
+        const entry = document.createElement('div');
+        entry.className = 'modal-log-entry';
+        const timeEl = document.createElement('span');
+        timeEl.className = 'modal-log-time';
+        timeEl.textContent = `[${time}]`;
+        const msgEl = document.createElement('span');
+        msgEl.className = colorClass;
+        msgEl.textContent = msg;
+        entry.appendChild(timeEl);
+        entry.appendChild(msgEl);
+        el.appendChild(entry);
         el.scrollTop = el.scrollHeight;
     }
 
@@ -2225,6 +2698,528 @@
         navigator.clipboard.writeText(txt).then(() => alert(`Đã copy ${checked.length} Tên công đoạn!`));
     }
 
+    /* ========== MODAL CHỌN MÁY IoT ========== */
+    
+    // Hàm test API IoT (có thể gọi từ console)
+    function getFactoryScopeParam(factoryValue = document.getElementById("factory").value.trim()) {
+        const raw = (factoryValue || "").toUpperCase();
+        const match = raw.match(/^P\d([A-Z])\d$/);
+        if (match) return `FAC-${match[1]}`;
+        if (raw.startsWith('FAC-')) return raw;
+        return raw;
+    }
+
+    function normalizeFactory(factoryValue) {
+        return getFactoryScopeParam(factoryValue || '').replace(/[^A-Z0-9]/g, '');
+    }
+
+    function buildIotStatusUrl(apiKey, options = {}) {
+        const params = new URLSearchParams({
+            key: apiKey,
+            json: 'true',
+            length: String(options.length || 500)
+        });
+        const factoryScope = getFactoryScopeParam(options.factory);
+        if (factoryScope) params.set('factory', factoryScope);
+        return `${IOT_STATUS_API}?${params.toString()}`;
+    }
+
+    function showIotModalNotice(title, message, type = 'success') {
+        const notice = document.getElementById('iotModalNotice');
+        if (!notice) {
+            showToast(title, message, type);
+            return;
+        }
+        const iconByType = {
+            success: 'fas fa-check-circle',
+            warning: 'fas fa-exclamation-triangle',
+            error: 'fas fa-times-circle',
+            info: 'fas fa-info-circle'
+        };
+        notice.className = `iot-modal-notice show ${type}`;
+        document.getElementById('iotModalNoticeIcon').className = iconByType[type] || iconByType.info;
+        document.getElementById('iotModalNoticeTitle').textContent = title;
+        document.getElementById('iotModalNoticeMessage').textContent = message;
+    }
+
+    window.testIoTAPI = async function() {
+        const apiKey = document.getElementById("apiKey").value.trim();
+        if (!apiKey) {
+            console.error("❌ Vui lòng nhập API Key!");
+            return;
+        }
+        
+        const iotUrl = buildIotStatusUrl(apiKey);
+        console.log("🔗 Testing API:", iotUrl);
+        
+        try {
+            const response = await fetch(iotUrl);
+            console.log("📡 Response status:", response.status);
+            console.log("📡 Response headers:", [...response.headers.entries()]);
+            
+            const text = await response.text();
+            console.log("📄 Raw response (first 500 chars):", text.slice(0, 500));
+            
+            try {
+                const json = JSON.parse(text);
+                console.log("✅ JSON parsed successfully");
+                console.log("📊 Success:", json.success);
+                console.log("📊 Data length:", json.data ? json.data.length : 0);
+                console.log("📋 First item:", json.data && json.data[0] ? json.data[0] : 'No data');
+                return json;
+            } catch (e) {
+                console.error("❌ JSON parse error:", e);
+                console.log("📄 Full response:", text);
+            }
+        } catch (error) {
+            console.error("❌ Fetch error:", error);
+        }
+    };
+    
+    async function autoFillMCID() {
+        const btn = document.getElementById("autoFillBtn");
+        const apiKey = document.getElementById("apiKey").value.trim();
+        const pkg = document.getElementById("pkg").value.trim();
+        if (!apiKey) return alert("Vui lòng nhập API Key!");
+        if (!pkg) return alert("Vui lòng chọn Package ID!");
+
+        const origHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải...';
+        
+        logWithTimestamp("🔍 Bắt đầu tải dữ liệu IoT Machine Modal", "info");
+
+        try {
+            // Bước 1: Lấy danh sách operations từ package (để biết số opserial)
+            logWithTimestamp(`📊 Đang lấy danh sách operations từ package: ${pkg}`, "info");
+            const opsUrl = `${MODULE_API}?mxpackage=${encodeURIComponent(pkg)}&mode=operations&apikey=${apiKey}`;
+            const opsRes = await fetch(opsUrl);
+            const opsData = await opsRes.json();
+            
+            if (!opsData.success || !opsData.data.operations) {
+                logWithTimestamp(`❌ Không thể lấy danh sách operations từ package`, "error");
+                alert("⚠️ Không thể lấy thông tin operations từ package!\n\nVui lòng kiểm tra Package ID.");
+                return;
+            }
+            
+            iotModalPackageOperations = opsData.data.operations;
+            // Bỏ qua opserial 1, chỉ đếm từ 2 trở đi
+            iotModalAvailableOpserials = iotModalPackageOperations.filter(op => op.opserial > 1).length;
+            
+            logWithTimestamp(`✅ ${iotModalAvailableOpserials} opserial khả dụng`, "success");
+
+            // Bước 2: Lấy danh sách máy IoT
+            const factory = document.getElementById("factory").value.trim() || "P2C1";
+            const iotUrl = buildIotStatusUrl(apiKey, { factory });
+            logWithTimestamp(`🔍 Đang tải máy IoT...`, "info");
+            const iotRes = await fetch(iotUrl);
+            const iotText = await iotRes.text();
+            let iotJson;
+            try { iotJson = JSON.parse(iotText); } catch { iotJson = null; }
+
+            if (!iotJson || !iotJson.success) {
+                logWithTimestamp(`❌ IoT Status API lỗi`, "error");
+                alert(`⚠️ Không thể tải dữ liệu IoT!\n\nLỗi: ${iotText.slice(0, 150)}\n\nVui lòng kiểm tra API Key và kết nối mạng.`);
+                return;
+            }
+
+            iotModalData = iotJson.data || [];
+            logWithTimestamp(`✅ ${iotModalData.length} máy IoT`, "success");
+            
+            if (iotModalData.length === 0) {
+                logWithTimestamp(`⚠️ Không có máy IoT`, "warning");
+                alert("⚠️ Không tìm thấy máy IoT nào!");
+                return;
+            }
+
+            setTimeout(() => openIotMachineModal(), 300);
+        } catch (error) {
+            logWithTimestamp(`❌ Lỗi tải IoT: ${error.message}`, "error");
+            alert(`❌ Lỗi: ${error.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origHTML;
+        }
+    }
+
+    function openIotMachineModal() {
+        logWithTimestamp(`🚀 Mở modal IoT (${iotModalData.length} máy)`, "info");
+        
+        const modalEl = document.getElementById('iotMachineModal');
+        if (!modalEl) {
+            console.error('❌ Modal element not found!');
+            alert('Lỗi: Không tìm thấy modal element!');
+            return;
+        }
+        
+        modalEl.classList.add('open');
+        populateIotModalPkgInfo();
+        populateIotModalDropdowns();
+        
+        // Tự động lọc theo Factory từ input
+        const factory = document.getElementById("factory").value.trim();
+        if (factory) {
+            const factoryFilter = document.getElementById('iotModalFactoryFilter');
+            const matchingOption = Array.from(factoryFilter.options).find(opt => normalizeFactory(opt.value) === normalizeFactory(factory));
+            factoryFilter.value = matchingOption ? matchingOption.value : '';
+            logWithTimestamp(`🔍 Lọc theo Factory: ${factory}`, "info");
+        }
+        
+        applyIotModalFilters();
+        updateSelectedCount();
+    }
+
+    function closeIotMachineModal() {
+        document.getElementById('iotMachineModal').classList.remove('open');
+    }
+
+    async function refreshIotMachineModal() {
+        const apiKey = document.getElementById("apiKey").value.trim();
+        const pkg = document.getElementById("pkg").value.trim();
+        if (!apiKey) return alert("Vui lòng nhập API Key!");
+        if (!pkg) return alert("Vui lòng chọn Package ID!");
+        
+        const btn = document.querySelector('#iotMachineModal .modal-header .btn-slate');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+        
+        logWithTimestamp("🔄 Làm mới IoT Modal", "info");
+        
+        try {
+            // Lấy lại operations
+            const opsUrl = `${MODULE_API}?mxpackage=${encodeURIComponent(pkg)}&mode=operations&apikey=${apiKey}`;
+            const opsRes = await fetch(opsUrl);
+            const opsData = await opsRes.json();
+            
+            if (!opsData.success || !opsData.data.operations) {
+                logWithTimestamp(`❌ Không thể lấy operations`, "error");
+                alert("⚠️ Không thể làm mới operations!");
+                return;
+            }
+            
+            iotModalPackageOperations = opsData.data.operations;
+            iotModalAvailableOpserials = iotModalPackageOperations.filter(op => op.opserial > 1).length;
+            logWithTimestamp(`✅ ${iotModalAvailableOpserials} opserial khả dụng`, "success");
+            
+            // Lấy lại IoT data
+            const factory = document.getElementById("factory").value.trim() || "P2C1";
+            const iotUrl = buildIotStatusUrl(apiKey, { factory });
+            const iotRes = await fetch(iotUrl);
+            const iotText = await iotRes.text();
+            let iotJson;
+            try { iotJson = JSON.parse(iotText); } catch { iotJson = null; }
+            
+            if (!iotJson || !iotJson.success) { 
+                logWithTimestamp(`❌ IoT Status API lỗi`, "error");
+                alert(`⚠️ Không thể làm mới dữ liệu IoT!`);
+                return; 
+            }
+            
+            iotModalData = iotJson.data || [];
+            logWithTimestamp(`✅ IoT: ${iotModalData.length} máy`, "success");
+            
+            populateIotModalPkgInfo();
+            populateIotModalDropdowns();
+            applyIotModalFilters();
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
+        }
+    }
+
+    function populateIotModalPkgInfo() {
+        const pkg = document.getElementById('pkg').value.trim();
+        const line = document.getElementById('infoLine').textContent || '-';
+        const style = document.getElementById('infoStyle').textContent || '-';
+        const target = document.getElementById('infoTarget').textContent || '-';
+        // Update stats-bar package info (shown above the machine table)
+        document.getElementById('iotModalPkgId').textContent = pkg || '-';
+        document.getElementById('iotModalPkgLine').textContent = line;
+        document.getElementById('iotModalPkgStyle').textContent = style;
+        document.getElementById('iotModalPkgTarget').textContent = target;
+        document.getElementById('iotModalOpserialAvailable').textContent = iotModalAvailableOpserials;
+    }
+
+    function populateIotModalDropdowns() {
+        const factories = [...new Set(iotModalData.map(m => m.Factory).filter(Boolean))].sort();
+        const lines = [...new Set(iotModalData.map(m => m.Line).filter(Boolean))].sort();
+        document.getElementById('iotModalFactoryFilter').innerHTML = '<option value="">Tất cả</option>' + factories.map(f => `<option value="${f}">${f}</option>`).join('');
+        document.getElementById('iotModalLineFilter').innerHTML = '<option value="">Tất cả</option>' + lines.map(l => `<option value="${l}">${l}</option>`).join('');
+    }
+
+    function applyIotModalFilters() {
+        // Reset sort when filters change
+        currentSort.column = null;
+        currentSort.asc = true;
+        
+        let filtered = iotModalData;
+        const f = document.getElementById('iotModalFactoryFilter').value;
+        const l = document.getElementById('iotModalLineFilter').value;
+        const s = document.getElementById('iotModalStatusFilter').value;
+        const m = document.getElementById('iotModalMxpkgFilter').value;
+        if (f) filtered = filtered.filter(x => normalizeFactory(x.Factory) === normalizeFactory(f));
+        if (l) filtered = filtered.filter(x => x.Line === l);
+        if (s) filtered = filtered.filter(x => (x.CurrentStatus || x.IotStatus || '') === s);
+        if (m === 'empty') filtered = filtered.filter(x => !x.MXPACKAGE);
+        else if (m === 'has') filtered = filtered.filter(x => !!x.MXPACKAGE);
+        renderIotMachineTable(filtered);
+    }
+
+    // ── Sort functions for IoT machine table ──
+    function getSortValue(item, column) {
+        switch (column) {
+            case 'machineid': return (item.MachineId || item.MacAddress || '');
+            case 'factory':   return (item.Factory || '');
+            case 'line':      return (item.Line || '');
+            case 'status':    return (item.CurrentStatus || item.IotStatus || '');
+            case 'curroutput': return parseFloat(item.CurrOutput) || 0;
+            case 'mototime':  return parseFloat(item.MotoTime) || 0;
+            case 'lastteaching': return (item.LastTeaching || '');
+            case 'mxpackage': return (item.MXPACKAGE || '');
+            default: return '';
+        }
+    }
+    
+    function sortIotTable(column) {
+        // Toggle direction if same column clicked again
+        if (currentSort.column === column) {
+            currentSort.asc = !currentSort.asc;
+        } else {
+            currentSort.column = column;
+            currentSort.asc = true;
+        }
+        
+        // Sort the filtered data in place
+        iotModalFilteredData.sort((a, b) => {
+            let valA = getSortValue(a, column);
+            let valB = getSortValue(b, column);
+            
+            // Numeric comparison for numeric columns
+            if (typeof valA === 'number' && typeof valB === 'number') {
+                return currentSort.asc ? valA - valB : valB - valA;
+            }
+            
+            // String comparison for text columns
+            valA = String(valA || '');
+            valB = String(valB || '');
+            return currentSort.asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
+        
+        renderIotMachineTable(iotModalFilteredData);
+    }
+    
+    function updateSortIcons() {
+        // Reset all sort icons to neutral
+        document.querySelectorAll('#iotMachineTable th .sort-icon').forEach(icon => {
+            icon.className = 'fas fa-sort sort-icon';
+        });
+        // Set active column icon
+        if (currentSort.column) {
+            const activeTh = document.querySelector(`#iotMachineTable th[data-column="${currentSort.column}"]`);
+            if (activeTh) {
+                const icon = activeTh.querySelector('.sort-icon');
+                if (icon) {
+                    icon.className = `fas fa-sort-${currentSort.asc ? 'up' : 'down'} sort-icon active`;
+                }
+            }
+        }
+    }
+    
+    function renderIotMachineTable(data) {
+        const tbody = document.getElementById('iotMachineTableBody');
+        const emptyEl = document.getElementById('iotModalEmpty');
+        const countEl = document.getElementById('iotModalCount');
+        
+        logWithTimestamp(`📋 Hiển thị ${data.length} máy`, "info");
+        
+        if (countEl) {
+            countEl.textContent = `${data.length} máy`;
+        }
+        
+        iotModalFilteredData = data;
+        if (data.length === 0) { 
+            tbody.innerHTML = ''; 
+            emptyEl.style.display = 'block'; 
+            logWithTimestamp("⚠️ Không có máy sau khi lọc", "warning");
+            showIotModalNotice('Không có dữ liệu phù hợp', 'Thử đổi Factory, Line hoặc trạng thái lọc trong modal.', 'warning');
+            return; 
+        }
+        emptyEl.style.display = 'none';
+        
+        // Build available opserial list for data-opserial attribute
+        const availableOpserials = iotModalPackageOperations
+            .filter(op => op.opserial > 1)
+            .map(op => op.opserial)
+            .sort((a, b) => a - b);
+        
+        tbody.innerHTML = data.map((m, idx) => {
+            const mcid = m.MachineId || m.MacAddress || '';
+            const opserial = availableOpserials[idx] !== undefined ? availableOpserials[idx] : (idx + 2);
+            return `<tr class="iot-modal-row" onclick="toggleIotMachineCheck(${idx})">
+                <td style="text-align:center;" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="iot-machine-cb" data-index="${idx}" data-opserial="${opserial}" onchange="updateSelectedCount()">
+                </td>
+                <td style="text-align:center;" onclick="event.stopPropagation()">
+                    <select class="iot-type-select" data-index="${idx}" style="padding:4px 6px; font-size:11px; border:1px solid #cbd5e1; border-radius:4px; background:white;">
+                        <option value="">--</option>
+                        <option value="FA">FA</option>
+                        <option value="QA">QA</option>
+                    </select>
+                </td>
+                <td><span class="mcid-tag">${mcid}</span></td>
+                <td>${m.Factory || '-'}</td>
+                <td>${m.Line || '-'}</td>
+                <td style="text-align:center;"><span style="color:${m.IotStatus === 'ON' || m.CurrentStatus === 'ONLINE' ? '#10b981' : '#ef4444'}; font-weight:600;">${m.CurrentStatus || m.IotStatus || '-'}</span></td>
+                <td style="text-align:right; font-weight:600;">${m.CurrOutput ?? '-'}</td>
+                <td style="text-align:right;">${m.MotoTime ?? '-'}</td>
+                <td style="font-size:11px;">${m.LastTeaching || '-'}</td>
+                <td style="font-size:11px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.MXPACKAGE || '-'}</td>
+            </tr>`;
+        }).join('');
+        
+        logWithTimestamp(`✅ Đã hiển thị ${data.length} máy`, "success");
+        showIotModalNotice('Đã tải danh sách máy', `${data.length} máy. Chọn và thêm vào textarea.`, 'info');
+        updateSortIcons();
+    }
+
+    function toggleIotMachineCheck(idx) {
+        const cb = document.querySelector(`.iot-machine-cb[data-index="${idx}"]`);
+        if (cb) {
+            cb.checked = !cb.checked;
+            updateSelectedCount();
+        }
+    }
+
+    function selectAllIotMachines(checked) {
+        document.querySelectorAll('.iot-machine-cb').forEach(cb => cb.checked = checked);
+        updateSelectedCount();
+    }
+    
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.iot-machine-cb:checked');
+        const count = checked.length;
+        document.getElementById('iotModalSelectedCount').textContent = count;
+        document.getElementById('btnAddCount').textContent = count;
+        document.querySelectorAll('.iot-machine-cb').forEach(cb => {
+            const row = cb.closest('tr');
+            if (row) row.classList.toggle('selected', cb.checked);
+        });
+        
+        // Cảnh báo nếu chọn quá nhiều
+        if (count > iotModalAvailableOpserials) {
+            document.getElementById('iotModalSelectedCount').style.color = '#dc2626';
+            document.getElementById('btnAddToTextarea').style.opacity = '0.6';
+            document.getElementById('btnAddToTextarea').disabled = true;
+        } else {
+            document.getElementById('iotModalSelectedCount').style.color = '#f59e0b';
+            document.getElementById('btnAddToTextarea').style.opacity = '1';
+            document.getElementById('btnAddToTextarea').disabled = false;
+        }
+    }
+    
+    function selectMachinesByRange() {
+        const fromEl = document.getElementById('iotRangeFrom');
+        const toEl = document.getElementById('iotRangeTo');
+        const from = parseInt(fromEl.value);
+        const to = parseInt(toEl.value);
+        
+        if (isNaN(from) || isNaN(to)) {
+            alert("⚠️ Vui lòng nhập số vào cả hai ô From và To!");
+            return;
+        }
+        if (from < 0 || to < 0) {
+            alert("⚠️ Số nhập vào không được âm!");
+            return;
+        }
+        if (from > to) {
+            alert("⚠️ Số From phải nhỏ hơn hoặc bằng số To!");
+            return;
+        }
+        
+        // Find machines whose actual opserial falls within [from, to]
+        const machines = [];
+        document.querySelectorAll('.iot-machine-cb').forEach(cb => {
+            const opserial = parseInt(cb.dataset.opserial);
+            if (!isNaN(opserial) && opserial >= from && opserial <= to) {
+                const idx = parseInt(cb.dataset.index);
+                const machine = iotModalFilteredData[idx];
+                const typeSelect = document.querySelector(`.iot-type-select[data-index="${idx}"]`);
+                const type = typeSelect ? typeSelect.value : '';
+                machines.push({ opserial, machine, type });
+            }
+        });
+        
+        if (machines.length === 0) {
+            showIotModalNotice('Không có máy', `Không tìm thấy máy nào trong khoảng ${from}-${to}.`, 'warning');
+            return;
+        }
+        
+        // Build text lines and write directly to textarea
+        const textarea = document.getElementById("list");
+        const newLines = machines.map(item => {
+            const mcid = item.machine.MachineId || item.machine.MacAddress || '';
+            return item.type ? `${item.opserial},${mcid},${item.type}` : `${item.opserial},${mcid}`;
+        });
+        textarea.value = newLines.join('\n');
+        
+        const msg = `${newLines.length} dòng opserial ${from}-${to} đã thêm vào textarea.`;
+        logWithTimestamp(`✅ ${msg}`, "success");
+        showIotModalNotice('Đã thêm vào textarea', msg, 'success');
+        showToast('✅ Thành công', msg, 'success');
+        fromEl.value = '';
+        toEl.value = '';
+        closeIotMachineModal();
+    }
+
+    function addSelectedIotMachines() {
+        const checked = document.querySelectorAll('.iot-machine-cb:checked');
+        if (checked.length === 0) return alert('Vui lòng chọn ít nhất 1 máy!');
+        
+        if (checked.length > iotModalAvailableOpserials) {
+            alert(`⚠️ Bạn đã chọn ${checked.length} máy nhưng chỉ có ${iotModalAvailableOpserials} opserial khả dụng!\n\n(Opserial 1 luôn bị bỏ qua)\n\nVui lòng giảm số lượng máy chọn.`);
+            return;
+        }
+        
+        const machines = [];
+        checked.forEach(cb => {
+            const idx = parseInt(cb.dataset.index);
+            const machine = iotModalFilteredData[idx];
+            const typeSelect = document.querySelector(`.iot-type-select[data-index="${idx}"]`);
+            const type = typeSelect ? typeSelect.value : '';
+            machines.push({ machine, type });
+        });
+        
+        // Lấy danh sách opserial khả dụng (bỏ qua opserial 1)
+        const availableOpserials = iotModalPackageOperations
+            .filter(op => op.opserial > 1)
+            .map(op => op.opserial)
+            .sort((a, b) => a - b);
+        
+        if (machines.length > availableOpserials.length) {
+            alert(`⚠️ Lỗi: Không đủ opserial!\n\nĐã chọn: ${machines.length}\nKhả dụng: ${availableOpserials.length}`);
+            return;
+        }
+        
+        const textarea = document.getElementById("list");
+        const newLines = machines.map((item, i) => {
+            const opserial = availableOpserials[i];
+            const mcid = item.machine.MachineId || item.machine.MacAddress || '';
+            if (item.type) {
+                return `${opserial},${mcid},${item.type}`;
+            } else {
+                return `${opserial},${mcid}`;
+            }
+        });
+        
+        // Thêm vào textarea (ghi đè hoàn toàn)
+        textarea.value = newLines.join('\n');
+        
+        const addedMessage = `${newLines.length} dòng vào textarea (opserial ${availableOpserials[0]}-${availableOpserials[newLines.length-1]})`;
+        logWithTimestamp(`✅ ${addedMessage}`, "success");
+        showIotModalNotice('Đã thêm vào textarea', addedMessage, 'success');
+        showToast('✅ Đã thêm', addedMessage, 'success');
+        closeIotMachineModal();
+    }
+
+
     /* ========== BUTTON EVENTS ========== */
     btnRun.onclick = runBatchProcess;
     btnPause.onclick = () => { isPaused = !isPaused; btnPause.textContent = isPaused ? "▶️ Tiếp Tục" : "⏸️ Tạm Dừng"; btnPause.className = isPaused ? "btn btn-success" : "btn btn-warning"; };
@@ -2238,6 +3233,7 @@
       if (res.status === 404 || res.status === 200 || res.ok) appendLog("✅ Server OK!", "success"); else appendLog(`❌ Lỗi: ${res.status||res.error}`, "error");
     };
     document.getElementById("importBtn").onclick = () => document.getElementById("fileInput").click();
+    document.getElementById("autoFillBtn").onclick = autoFillMCID;
     document.getElementById("fileInput").onchange = (e) => {
       const f = e.target.files[0]; if(!f) return;
       const r = new FileReader();
@@ -2256,10 +3252,20 @@
     /* ========== INITIALIZATION ========== */
     document.addEventListener('DOMContentLoaded', () => {
         setTodayDate();
+        checkSessionSession();
+
+        // Auth gate Enter key handlers
+        const authPass = document.getElementById('authPassword');
+        const authUser = document.getElementById('authUsername');
+        if (authPass) authPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthLogin(); });
+        if (authUser) authUser.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthLogin(); });
+
         if(isLocalhost) {
-            btnRun.disabled = false; btnRun.innerHTML = "🚀 BẮT ĐẦU (Localhost)";
-            btnRun.style.opacity = "1"; btnRun.style.cursor = "pointer";
-            document.getElementById('turnstileWidget').style.display = 'none';
+            unlockRunButton("🚀 BẮT ĐẦU (Local)");
+            turnstileToken = "LOCAL_BYPASS";
+            hideTurnstileWidget();
+            document.getElementById('turnstileStatus').textContent = "Local";
+            document.getElementById('turnstileStatus').className = "turnstile-badge status-success";
         }
     });
   </script>
