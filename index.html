@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MES QR Scanner Pro V2.1 - Session Auth + IoT Enhanced</title>
+  <title>MES QR Scanner Pro V2.2 - Session Auth + IoT Enhanced</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- FONT AWESOME -->
@@ -692,7 +692,7 @@
 
   <div class="navbar">
     <div class="brand">
-      <span>⚡ MES QR Scanner Pro v2.1 🚀</span>
+      <span>⚡ MES QR Scanner Pro V2.2 🚀</span>
       <span style="font-size:0.7rem; background:linear-gradient(135deg, #10b981 0%, #059669 100%); padding:2px 8px; border-radius:4px; margin-left:8px; font-weight:700;">Auth + IoT</span>
     </div>
     <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Session Auth + Smart Opserial + Type Dropdown + From-To Select + Sortable Table</div>
@@ -706,11 +706,6 @@
       <div class="card">
         <div class="card-header"><div class="card-title">📝 Cấu Hình Dữ Liệu</div></div>
         
-        <div class="form-group">
-          <label>API Key</label>
-          <input type="password" id="apiKey" placeholder="Nhập khóa bảo mật...">
-        </div>
-
         <div class="form-row">
           <div style="flex: 1;">
             <label>Factory</label>
@@ -1130,17 +1125,17 @@
 
   <script>
     /* ========== CẤU HÌNH & VARIABLES ========== */
-    const API_ENDPOINT = "https://mes-qr-scanner.chiscoong-cloudflare-com.workers.dev/";
-    const PACKAGE_API = "https://today-package.chiscoong-cloudflare-com.workers.dev/api/packages";
-    const MODULE_API = "https://module-requests.chiscoong-cloudflare-com.workers.dev/opdetails";
-    const MODULE_DETAIL_API = "https://module-requests.chiscoong-cloudflare-com.workers.dev/detail";
-    const REMOVE_API = "https://remove-machine.chiscoong-cloudflare-com.workers.dev/remove-machine";
-    const IOT_STATUS_API = "https://iot-status.vercel.app/";
+    const BASE_URL = "https://mes-proxy.chiscoong-cloudflare-com.workers.dev";
+    const API_ENDPOINT = `${BASE_URL}/scan`;
+    const PACKAGE_API = `${BASE_URL}/packages`;
+    const MODULE_API = `${BASE_URL}/opdetails`;
+    const MODULE_DETAIL_API = `${BASE_URL}/detail`;
+    const REMOVE_API = `${BASE_URL}/remove-machine`;
+    const IOT_STATUS_API = `${BASE_URL}/iot-status`;
+    
     // Auth Worker endpoints
-    const WORKER_AUTH_BASE = "https://auth-password-gate.chiscoong-cloudflare-com.workers.dev";
-    const WORKER_AUTH_PROJECT = "scanqr";
-    const WORKER_LOGIN_ENDPOINT = `${WORKER_AUTH_BASE}/scanqr/verify`;
-    const WORKER_VALIDATE_ENDPOINT = `${WORKER_AUTH_BASE}/scanqr/validate-session`;
+    const WORKER_LOGIN_ENDPOINT = `${BASE_URL}/auth/verify`;
+    const WORKER_VALIDATE_ENDPOINT = `${BASE_URL}/auth/validate`;
     
     // BIẾN CHO MODAL IoT
     let iotModalData = [];
@@ -1156,11 +1151,11 @@
     let isPaused = false, isStopped = false;
     let currentBatchStart = null, batchResults = [], currentPackages = [];
     
-    let turnstileToken = null;
-    let tokenTimestamp = 0; 
+    let turnstileToken = "LOCAL_BYPASS";
+    let tokenTimestamp = Date.now(); 
     let tokenRefreshResolver = null; 
     const LOCAL_HOSTS = ['localhost', '127.0.0.1', '::1', ''];
-    let isLocalhost = window.location.protocol === 'file:' || LOCAL_HOSTS.includes(window.location.hostname);
+    let isLocalhost = LOCAL_HOSTS.includes(location.hostname) || location.hostname === '';
 
     // BIẾN MỚI CHO MODAL QUẢN LÝ PACKAGE
     let currentModalPackage = null;
@@ -1269,14 +1264,30 @@
     function lockApp() {
         const gate = document.getElementById('authGate');
         if (gate) gate.classList.add('active');
+        if (!isLocalhost) {
+            const widget = document.getElementById('turnstileWidget');
+            if (widget) {
+                widget.style.display = 'block';
+                widget.classList.remove('minimized');
+            }
+        }
     }
 
     function unlockApp() {
         const gate = document.getElementById('authGate');
         if (gate) gate.classList.remove('active');
+        hideTurnstileWidget();
     }
 
     async function checkSessionSession() {
+        if (isLocalhost) {
+            // Local dev: Turnstile bypassed, auth vẫn hoạt động
+            turnstileToken = "LOCAL_BYPASS";
+            document.getElementById('turnstileStatus').textContent = "Local";
+            document.getElementById('turnstileStatus').className = "turnstile-badge status-success";
+            document.getElementById('turnstileWidget').style.display = 'none';
+        }
+
         const token = localStorage.getItem('auth_token');
         if (!token) {
             lockApp();
@@ -1285,24 +1296,27 @@
         try {
             const res = await fetch(WORKER_VALIDATE_ENDPOINT, {
                 method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
             if (data.success) {
                 unlockApp();
-                logWithTimestamp('🔐 Phiên làm việc hợp lệ. Chào mừng trở lại!', 'success');
+                logWithTimestamp('🔐 Token hợp lệ. Đã đăng nhập tự động.', 'success');
+                unlockRunButton(isLocalhost ? "🚀 BẮT ĐẦU (Local)" : "🚀 BẮT ĐẦU CHẠY");
+                hideTurnstileWidget();
             } else {
                 localStorage.removeItem('auth_token');
                 lockApp();
-                logWithTimestamp('⚠️ Phiên làm việc đã hết hạn hoặc bị thu hồi từ máy chủ. Vui lòng đăng nhập lại.', 'warning');
             }
         } catch (e) {
-            // Network error — allow access in case of offline / dev mode
-            unlockApp();
-            logWithTimestamp('⚠️ Không thể kiểm tra phiên làm việc. Chế độ offline.', 'warning');
+            if (isLocalhost) {
+                // Worker chưa chạy, bypass toàn bộ cho local dev
+                unlockApp();
+                unlockRunButton("🚀 BẮT ĐẦU (Local)");
+                logWithTimestamp('🔐 Local dev: Bỏ qua xác thực.', 'success');
+            } else {
+                lockApp();
+            }
         }
     }
 
@@ -1322,17 +1336,31 @@
         errorEl.textContent = '';
 
         try {
+            const body = { username, password };
+            if (!isLocalhost && window.turnstile) {
+                const turnstileResp = document.querySelector('.cf-turnstile');
+                if (turnstileResp) {
+                    body.turnstileToken = turnstileToken || '';
+                }
+            }
+
             const res = await fetch(WORKER_LOGIN_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify(body)
             });
             const data = await res.json();
 
             if (data.success && data.token) {
                 localStorage.setItem('auth_token', data.token);
                 unlockApp();
+                unlockRunButton(isLocalhost ? "🚀 BẮT ĐẦU (Local)" : "🚀 BẮT ĐẦU CHẠY");
                 logWithTimestamp(`🔐 Đăng nhập thành công. Chào mừng ${data.user}!`, 'success');
+                if (!isLocalhost) {
+                    document.getElementById('turnstileStatus').textContent = "Đã xác thực";
+                    document.getElementById('turnstileStatus').className = "turnstile-badge status-success";
+                    hideTurnstileWidget();
+                }
             } else {
                 errorEl.textContent = data.msg || 'Sai tài khoản hoặc mật khẩu.';
             }
@@ -1342,6 +1370,22 @@
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-shield-alt"></i> Đăng Nhập';
         }
+    }
+
+    /* ========== API FETCH WRAPPER ========== */
+    async function apiFetch(url, options = {}) {
+        const token = localStorage.getItem('auth_token');
+        const headers = options.headers || {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch(url, { ...options, headers });
+        if (res.status === 401 && !isLocalhost) {
+            localStorage.removeItem('auth_token');
+            lockApp();
+            throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+        }
+        return res;
     }
 
     /* ========== HELPER FUNCTIONS ========== */
@@ -1502,9 +1546,6 @@
     async function fetchPackages() {
       const factory = document.getElementById('factory').value.trim();
       const dateStr = getApiDateString();
-      const apiKey = document.getElementById('apiKey').value.trim();
-
-      if (!apiKey) { appendLog("⚠️ Chưa nhập API Key.", "warning"); return document.getElementById('apiKey').focus(); }
       if (!factory || !dateStr) return;
 
       const btnReload = document.getElementById('btnReloadPkg');
@@ -1512,9 +1553,9 @@
 
       try {
           btnReload.disabled = true; btnReload.textContent = "⏳";
-          const url = `${PACKAGE_API}?factory=${encodeURIComponent(factory)}&fromDate=${dateStr}&withDetails=true&apikey=${encodeURIComponent(apiKey)}`;
+          const url = `${PACKAGE_API}?factory=${encodeURIComponent(factory)}&fromDate=${dateStr}&withDetails=true`;
           appendLog(`Đang tải danh sách gói...`, 'info');
-          const res = await fetch(url);
+          const res = await apiFetch(url);
           if (!res.ok) throw new Error(`Lỗi HTTP ${res.status}`);
           
           const rawData = await res.json();
@@ -1597,11 +1638,9 @@
             appendLog(`Style: ${p.styleText || 'N/A'}`, 'detail');
             appendLog(`Target: ${p.target || '0'}`, 'detail');
 
-            // 🔥 LOGIC MỚI: FETCH OUTPUT
             infoOutput.innerHTML = '<span class="loader" style="width:12px;height:12px;border-width:2px;"></span>';
-            const apiKey = document.getElementById('apiKey').value;
             
-            fetch(`${MODULE_API}?mxpackage=${p.packageId}&mode=summary&apikey=${apiKey}`)
+            apiFetch(`${MODULE_API}?mxpackage=${p.packageId}&mode=summary`)
                 .then(res => res.json())
                 .then(json => {
                     if(json.success && json.data && json.data.summary) {
@@ -1634,20 +1673,20 @@
         }
     });
 
-    document.getElementById('factory').addEventListener('change', () => { if(document.getElementById('apiKey').value) fetchPackages(); });
-    document.getElementById('dateSelect').addEventListener('change', () => { if(document.getElementById('apiKey').value) fetchPackages(); });
+    document.getElementById('factory').addEventListener('change', fetchPackages);
+    document.getElementById('dateSelect').addEventListener('change', fetchPackages);
     document.getElementById('btnReloadPkg').addEventListener('click', fetchPackages);
 
     /* ========== MAIN SCANNER FUNCTIONS ========== */
-    async function sendRequest({apiKey, pkg, opserial, mcid, processtype}) {
-      let url = `${API_ENDPOINT}?mxpackage=${encodeURIComponent(pkg)}&opserial=${opserial}&mcid=${mcid}${processtype !== undefined ? `&processtype=${processtype}` : ''}&apikey=${encodeURIComponent(apiKey)}`;
+    async function sendRequest({pkg, opserial, mcid, processtype}) {
+      let url = `${API_ENDPOINT}?mxpackage=${encodeURIComponent(pkg)}&opserial=${opserial}&mcid=${mcid}${processtype !== undefined ? `&processtype=${processtype}` : ''}`;
       if (turnstileToken && !isLocalhost) url += `&cf-turnstile-response=${encodeURIComponent(turnstileToken)}`;
 
       const start = Date.now();
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); 
-        const res = await fetch(url, { method: 'GET', signal: controller.signal });
+        const res = await apiFetch(url, { method: 'GET', signal: controller.signal });
         clearTimeout(timeoutId);
         const text = await res.text();
         const duration = ((Date.now() - start) / 1000).toFixed(2);
@@ -1670,10 +1709,9 @@
 
     async function runBatchProcess() {
       if (!turnstileToken && !isLocalhost) return alert("Vui lòng hoàn thành xác thực bảo mật ở góc màn hình!");
-      const apiKey = document.getElementById("apiKey").value.trim();
       const pkg = document.getElementById("pkg").value.trim();
       const rawLines = document.getElementById("list").value.split("\n").map(x => x.trim()).filter(Boolean);
-      if (!apiKey || !pkg || rawLines.length === 0) return alert("Thiếu dữ liệu đầu vào!");
+      if (!pkg || rawLines.length === 0) return alert("Thiếu dữ liệu đầu vào!");
 
       batchResults = [];
       document.getElementById("statSuccess").textContent = "0"; document.getElementById("statFailed").textContent = "0";
@@ -1684,7 +1722,7 @@
 
       const queue = rawLines.map((line, idx) => {
         const parts = line.split(",").map(x => x.trim());
-        return { apiKey, pkg, opserial: parts[0], mcid: parts[1], processtype: parts[2]||'', index: idx + 1 };
+        return { pkg, opserial: parts[0], mcid: parts[1], processtype: parts[2]||'', index: idx + 1 };
       });
 
       const total = queue.length;
@@ -1756,7 +1794,7 @@
       btnRun.style.display = isRunning ? "none" : "block";
       btnPause.style.display = isRunning ? "block" : "none";
       btnStop.style.display = isRunning ? "block" : "none";
-      const inputs = ["apiKey", "factory", "dateSelect", "pkg", "btnReloadPkg", "list", "importBtn"];
+      const inputs = ["factory", "dateSelect", "pkg", "btnReloadPkg", "list", "importBtn"];
       inputs.forEach(id => document.getElementById(id).disabled = isRunning);
       btnExport.disabled = isRunning || batchResults.length === 0;
 
@@ -1773,10 +1811,7 @@
 
     /* ========== MODAL PACKAGE MANAGEMENT ========== */
     function openPackageManagement() {
-        const apiKey = document.getElementById('apiKey').value;
         const selectedPackageId = document.getElementById('pkg').value;
-
-        if(!apiKey) return alert("Vui lòng nhập API Key!");
         if(!selectedPackageId) return alert("Vui lòng nhập hoặc chọn Package ID!");
 
         currentModalPackage = selectedPackageId;
@@ -1828,14 +1863,13 @@
     }
 
     async function loadOperationsForModal() {
-        const apiKey = document.getElementById('apiKey').value;
         const selectedPackageId = currentModalPackage;
         const content = document.getElementById('operationsContent');
         
         content.innerHTML = '<div style="text-align:center; padding:20px;"><div class="loader"></div> Đang tải danh sách công đoạn...</div>';
 
         try {
-            const res = await fetch(`${MODULE_API}?mxpackage=${selectedPackageId}&mode=operations&apikey=${apiKey}`);
+            const res = await apiFetch(`${MODULE_API}?mxpackage=${selectedPackageId}&mode=operations`);
             const json = await res.json();
             
             if (!json.success || !json.data.operations) throw new Error("Không tìm thấy operation.");
@@ -1912,7 +1946,7 @@
             // Fetch details ngầm
             const styleInfo = parseMxPackage(selectedPackageId);
             if (styleInfo.success) {
-                fetchMachineDetailsBackground(apiKey, styleInfo, ops);
+                fetchMachineDetailsBackground(styleInfo, ops);
             } else {
                 modalLog(`❌ Không thể phân tích Package ID: ${styleInfo.error}`, 'error');
             }
@@ -1922,13 +1956,13 @@
         }
     }
 
-    async function fetchMachineDetailsBackground(apiKey, styleInfo, operations) {
+    async function fetchMachineDetailsBackground(styleInfo, operations) {
         const hasMcidList = [];
         
         for (let op of operations) {
             try {
-                let url = `${MODULE_DETAIL_API}?stylecode=${styleInfo.stylecode}&stylesize=${styleInfo.stylesize}&stylecolorserial=${styleInfo.stylecolorserial}&revno=${styleInfo.revno}&oprevno=${op.oprevno}&opserial=${op.opserial}&apikey=${apiKey}`;
-                const res = await fetch(url);
+                let url = `${MODULE_DETAIL_API}?stylecode=${styleInfo.stylecode}&stylesize=${styleInfo.stylesize}&stylecolorserial=${styleInfo.stylecolorserial}&revno=${styleInfo.revno}&oprevno=${op.oprevno}&opserial=${op.opserial}`;
+                const res = await apiFetch(url);
                 const json = await res.json();
 
                 if (json.success && json.data?.Result?.MachineList?.length > 0) {
@@ -2057,7 +2091,6 @@
             return;
         }
         
-        const apiKey = document.getElementById('apiKey').value.trim();
         const pkg = currentModalPackage;
         
         if (!turnstileToken && !isLocalhost) {
@@ -2070,10 +2103,10 @@
         btnElement.disabled = true;
         
         try {
-            let url = `${REMOVE_API}?apikey=${apiKey}&mxpackage=${encodeURIComponent(pkg)}&mcid=${encodeURIComponent(mcid)}&opserial=${opserial}`;
+            let url = `${REMOVE_API}?mxpackage=${encodeURIComponent(pkg)}&mcid=${encodeURIComponent(mcid)}&opserial=${opserial}`;
             if (turnstileToken && !isLocalhost) url += `&cf-turnstile-response=${encodeURIComponent(turnstileToken)}`;
             
-            const response = await fetch(url);
+            const response = await apiFetch(url);
             const result = await response.json();
             
             if (result.IsSuccess) {
@@ -2120,7 +2153,6 @@
             return;
         }
         
-        const apiKey = document.getElementById('apiKey').value.trim();
         const pkg = currentModalPackage;
         
         if (!turnstileToken && !isLocalhost) {
@@ -2133,13 +2165,13 @@
         btnElement.disabled = true;
         
         try {
-            let url = `${API_ENDPOINT}?apikey=${apiKey}&mxpackage=${encodeURIComponent(pkg)}&mcid=${encodeURIComponent(mcid)}&opserial=${opserial}`;
+            let url = `${API_ENDPOINT}?mxpackage=${encodeURIComponent(pkg)}&mcid=${encodeURIComponent(mcid)}&opserial=${opserial}`;
             if (commandType !== undefined && commandType !== '') {
                 url += `&processtype=${commandType}`;
             }
             if (turnstileToken && !isLocalhost) url += `&cf-turnstile-response=${encodeURIComponent(turnstileToken)}`;
             
-            const response = await fetch(url);
+            const response = await apiFetch(url);
             const result = await response.json();
             
             if (result.IsSuccess || result.ok) {
@@ -2190,7 +2222,6 @@
             return;
         }
         
-        const apiKey = document.getElementById('apiKey').value.trim();
         const pkg = currentModalPackage;
         
         if (!turnstileToken && !isLocalhost) {
@@ -2208,10 +2239,10 @@
             if (!mcid || mcid.trim() === '') continue;
             
             try {
-                let url = `${REMOVE_API}?apikey=${apiKey}&mxpackage=${encodeURIComponent(pkg)}&mcid=${encodeURIComponent(mcid)}&opserial=${opserial}`;
+                let url = `${REMOVE_API}?mxpackage=${encodeURIComponent(pkg)}&mcid=${encodeURIComponent(mcid)}&opserial=${opserial}`;
                 if (turnstileToken && !isLocalhost) url += `&cf-turnstile-response=${encodeURIComponent(turnstileToken)}`;
                 
-                const response = await fetch(url);
+                const response = await apiFetch(url);
                 const result = await response.json();
                 
                 if (result.IsSuccess) {
@@ -2267,7 +2298,6 @@
             return;
         }
         
-        const apiKey = document.getElementById('apiKey').value.trim();
         const pkg = currentModalPackage;
         
         if (!turnstileToken && !isLocalhost) {
@@ -2285,13 +2315,13 @@
             if (!mcid || mcid.trim() === '') continue;
             
             try {
-                let url = `${API_ENDPOINT}?apikey=${apiKey}&mxpackage=${encodeURIComponent(pkg)}&mcid=${encodeURIComponent(mcid)}&opserial=${opserial}`;
+                let url = `${API_ENDPOINT}?mxpackage=${encodeURIComponent(pkg)}&mcid=${encodeURIComponent(mcid)}&opserial=${opserial}`;
                 if (commandType !== '') {
                     url += `&processtype=${commandType}`;
                 }
                 if (turnstileToken && !isLocalhost) url += `&cf-turnstile-response=${encodeURIComponent(turnstileToken)}`;
                 
-                const response = await fetch(url);
+                const response = await apiFetch(url);
                 const result = await response.json();
                 
                 if (result.IsSuccess || result.ok) {
@@ -2326,17 +2356,15 @@
 
     /* ========== IOT SCAN FUNCTIONS ========== */
     async function startIotScan() {
-        // Kiểm tra token trước khi bắt đầu
         if (!turnstileToken && !isLocalhost) {
             alert("Vui lòng hoàn thành xác thực bảo mật trước!");
             return;
         }
 
-        const apiKey = document.getElementById('apiKey').value.trim();
         const pkgId = currentModalPackage;
         
-        if(!apiKey || !pkgId) { 
-            modalLog("Thiếu API Key hoặc Package ID!", "error");
+        if(!pkgId) { 
+            modalLog("Thiếu Package ID!", "error");
             return; 
         }
         
@@ -2366,8 +2394,8 @@
             modalLog(`  • Color: ${styleInfo.stylecolorserial}`, 'info');
             modalLog(`  • Rev: ${styleInfo.revno}`, 'info');
 
-            const opsUrl = `${MODULE_API}?mxpackage=${encodeURIComponent(pkgId)}&mode=operations&apikey=${apiKey}`;
-            const opsRes = await fetch(opsUrl, { signal: scanAbortController.signal });
+            const opsUrl = `${MODULE_API}?mxpackage=${encodeURIComponent(pkgId)}&mode=operations`;
+            const opsRes = await apiFetch(opsUrl, { signal: scanAbortController.signal });
             const opsData = await opsRes.json();
             
             if(!opsData.success || !opsData.data?.operations) throw new Error("Lỗi lấy danh sách công đoạn.");
@@ -2385,11 +2413,10 @@
                 updateModalProgress((i/operations.length)*100, `Quét OP: ${op.opserial}`);
                 
                 try {
-                    let detailUrl = `${MODULE_DETAIL_API}?stylecode=${styleInfo.stylecode}&stylesize=${styleInfo.stylesize}&stylecolorserial=${styleInfo.stylecolorserial}&revno=${styleInfo.revno}&oprevno=${op.oprevno}&opserial=${op.opserial}&apikey=${apiKey}`;
-                    // Thêm token vào request nếu cần
+                    let detailUrl = `${MODULE_DETAIL_API}?stylecode=${styleInfo.stylecode}&stylesize=${styleInfo.stylesize}&stylecolorserial=${styleInfo.stylecolorserial}&revno=${styleInfo.revno}&oprevno=${op.oprevno}&opserial=${op.opserial}`;
                     if (turnstileToken && !isLocalhost) detailUrl += `&cf-turnstile-response=${encodeURIComponent(turnstileToken)}`;
 
-                    const detailRes = await fetch(detailUrl, { signal: scanAbortController.signal });
+                    const detailRes = await apiFetch(detailUrl, { signal: scanAbortController.signal });
                     const detailJson = await detailRes.json();
                     
                     if(detailJson.success && detailJson.data?.Result?.MachineList) {
@@ -2549,7 +2576,6 @@
 
         if(!confirm(`⚠️ CẢNH BÁO: Xóa ${selected.length} máy khỏi Package?`)) return;
 
-        const apiKey = document.getElementById('apiKey').value.trim();
         let success = 0, fail = 0;
 
         // Hiển thị progress
@@ -2566,12 +2592,10 @@
             updateModalProgress((i/selected.length)*100, `Xóa: ${item.mcid}`);
             
             try {
-                let url = `${REMOVE_API}?apikey=${apiKey}&mxpackage=${encodeURIComponent(item.pkg)}&mcid=${encodeURIComponent(item.mcid)}&opserial=${item.opserial}`;
-                
-                // Thêm Token vào request
+                let url = `${REMOVE_API}?mxpackage=${encodeURIComponent(item.pkg)}&mcid=${encodeURIComponent(item.mcid)}&opserial=${item.opserial}`;
                 if (turnstileToken && !isLocalhost) url += `&cf-turnstile-response=${encodeURIComponent(turnstileToken)}`;
 
-                const res = await fetch(url);
+                const res = await apiFetch(url);
                 const json = await res.json();
                 
                 if(json.IsSuccess) {
@@ -2621,7 +2645,6 @@
 
         if(!confirm(confirmMsg)) return;
 
-        const apiKey = document.getElementById('apiKey').value.trim();
         let success = 0, fail = 0;
 
         // Hiển thị progress
@@ -2638,17 +2661,13 @@
             updateModalProgress((i/selected.length)*100, `${commandText}: ${item.mcid}`);
             
             try {
-                let url = `${API_ENDPOINT}?apikey=${apiKey}&mxpackage=${encodeURIComponent(item.pkg)}&mcid=${encodeURIComponent(item.mcid)}&opserial=${item.opserial}`;
-                
-                // Nếu commandType không rỗng, thêm processtype vào URL
+                let url = `${API_ENDPOINT}?mxpackage=${encodeURIComponent(item.pkg)}&mcid=${encodeURIComponent(item.mcid)}&opserial=${item.opserial}`;
                 if (commandType !== '') {
                     url += `&processtype=${commandType}`;
                 }
-                
-                // Thêm Token vào request
                 if (turnstileToken && !isLocalhost) url += `&cf-turnstile-response=${encodeURIComponent(turnstileToken)}`;
 
-                const res = await fetch(url);
+                const res = await apiFetch(url);
                 const json = await res.json();
                 
                 if(json.IsSuccess || json.ok) {
@@ -2713,9 +2732,8 @@
         return getFactoryScopeParam(factoryValue || '').replace(/[^A-Z0-9]/g, '');
     }
 
-    function buildIotStatusUrl(apiKey, options = {}) {
+    function buildIotStatusUrl(options = {}) {
         const params = new URLSearchParams({
-            key: apiKey,
             json: 'true',
             length: String(options.length || 500)
         });
@@ -2743,17 +2761,11 @@
     }
 
     window.testIoTAPI = async function() {
-        const apiKey = document.getElementById("apiKey").value.trim();
-        if (!apiKey) {
-            console.error("❌ Vui lòng nhập API Key!");
-            return;
-        }
-        
-        const iotUrl = buildIotStatusUrl(apiKey);
+        const iotUrl = buildIotStatusUrl();
         console.log("🔗 Testing API:", iotUrl);
         
         try {
-            const response = await fetch(iotUrl);
+            const response = await apiFetch(iotUrl);
             console.log("📡 Response status:", response.status);
             console.log("📡 Response headers:", [...response.headers.entries()]);
             
@@ -2778,9 +2790,7 @@
     
     async function autoFillMCID() {
         const btn = document.getElementById("autoFillBtn");
-        const apiKey = document.getElementById("apiKey").value.trim();
         const pkg = document.getElementById("pkg").value.trim();
-        if (!apiKey) return alert("Vui lòng nhập API Key!");
         if (!pkg) return alert("Vui lòng chọn Package ID!");
 
         const origHTML = btn.innerHTML;
@@ -2790,10 +2800,9 @@
         logWithTimestamp("🔍 Bắt đầu tải dữ liệu IoT Machine Modal", "info");
 
         try {
-            // Bước 1: Lấy danh sách operations từ package (để biết số opserial)
             logWithTimestamp(`📊 Đang lấy danh sách operations từ package: ${pkg}`, "info");
-            const opsUrl = `${MODULE_API}?mxpackage=${encodeURIComponent(pkg)}&mode=operations&apikey=${apiKey}`;
-            const opsRes = await fetch(opsUrl);
+            const opsUrl = `${MODULE_API}?mxpackage=${encodeURIComponent(pkg)}&mode=operations`;
+            const opsRes = await apiFetch(opsUrl);
             const opsData = await opsRes.json();
             
             if (!opsData.success || !opsData.data.operations) {
@@ -2803,23 +2812,21 @@
             }
             
             iotModalPackageOperations = opsData.data.operations;
-            // Bỏ qua opserial 1, chỉ đếm từ 2 trở đi
             iotModalAvailableOpserials = iotModalPackageOperations.filter(op => op.opserial > 1).length;
             
             logWithTimestamp(`✅ ${iotModalAvailableOpserials} opserial khả dụng`, "success");
 
-            // Bước 2: Lấy danh sách máy IoT
             const factory = document.getElementById("factory").value.trim() || "P2C1";
-            const iotUrl = buildIotStatusUrl(apiKey, { factory });
+            const iotUrl = buildIotStatusUrl({ factory });
             logWithTimestamp(`🔍 Đang tải máy IoT...`, "info");
-            const iotRes = await fetch(iotUrl);
+            const iotRes = await apiFetch(iotUrl);
             const iotText = await iotRes.text();
             let iotJson;
             try { iotJson = JSON.parse(iotText); } catch { iotJson = null; }
 
             if (!iotJson || !iotJson.success) {
                 logWithTimestamp(`❌ IoT Status API lỗi`, "error");
-                alert(`⚠️ Không thể tải dữ liệu IoT!\n\nLỗi: ${iotText.slice(0, 150)}\n\nVui lòng kiểm tra API Key và kết nối mạng.`);
+                alert(`⚠️ Không thể tải dữ liệu IoT!\n\nLỗi: ${iotText.slice(0, 150)}\n\nVui lòng kiểm tra kết nối mạng.`);
                 return;
             }
 
@@ -2874,9 +2881,7 @@
     }
 
     async function refreshIotMachineModal() {
-        const apiKey = document.getElementById("apiKey").value.trim();
         const pkg = document.getElementById("pkg").value.trim();
-        if (!apiKey) return alert("Vui lòng nhập API Key!");
         if (!pkg) return alert("Vui lòng chọn Package ID!");
         
         const btn = document.querySelector('#iotMachineModal .modal-header .btn-slate');
@@ -2885,9 +2890,8 @@
         logWithTimestamp("🔄 Làm mới IoT Modal", "info");
         
         try {
-            // Lấy lại operations
-            const opsUrl = `${MODULE_API}?mxpackage=${encodeURIComponent(pkg)}&mode=operations&apikey=${apiKey}`;
-            const opsRes = await fetch(opsUrl);
+            const opsUrl = `${MODULE_API}?mxpackage=${encodeURIComponent(pkg)}&mode=operations`;
+            const opsRes = await apiFetch(opsUrl);
             const opsData = await opsRes.json();
             
             if (!opsData.success || !opsData.data.operations) {
@@ -2900,10 +2904,9 @@
             iotModalAvailableOpserials = iotModalPackageOperations.filter(op => op.opserial > 1).length;
             logWithTimestamp(`✅ ${iotModalAvailableOpserials} opserial khả dụng`, "success");
             
-            // Lấy lại IoT data
             const factory = document.getElementById("factory").value.trim() || "P2C1";
-            const iotUrl = buildIotStatusUrl(apiKey, { factory });
-            const iotRes = await fetch(iotUrl);
+            const iotUrl = buildIotStatusUrl({ factory });
+            const iotRes = await apiFetch(iotUrl);
             const iotText = await iotRes.text();
             let iotJson;
             try { iotJson = JSON.parse(iotText); } catch { iotJson = null; }
@@ -3225,11 +3228,9 @@
     btnPause.onclick = () => { isPaused = !isPaused; btnPause.textContent = isPaused ? "▶️ Tiếp Tục" : "⏸️ Tạm Dừng"; btnPause.className = isPaused ? "btn btn-success" : "btn btn-warning"; };
     btnStop.onclick = () => { if(confirm("Dừng hệ thống?")) isStopped = true; };
     document.getElementById("testConnection").onclick = async () => {
-      const apiKey = document.getElementById("apiKey").value.trim();
-      if(!apiKey) return alert("Nhập API Key trước!");
       if (!turnstileToken && !isLocalhost) return alert("Vui lòng xác thực bảo mật trước!");
       appendLog("🔗 Đang Test kết nối...");
-      const res = await sendRequest({ apiKey, pkg: "TEST", opserial: "0", mcid: "TEST" });
+      const res = await sendRequest({ pkg: "TEST", opserial: "0", mcid: "TEST" });
       if (res.status === 404 || res.status === 200 || res.ok) appendLog("✅ Server OK!", "success"); else appendLog(`❌ Lỗi: ${res.status||res.error}`, "error");
     };
     document.getElementById("importBtn").onclick = () => document.getElementById("fileInput").click();
@@ -3252,6 +3253,9 @@
     /* ========== INITIALIZATION ========== */
     document.addEventListener('DOMContentLoaded', () => {
         setTodayDate();
+        // Ẩn Turnstile widget ban đầu, lockApp() sẽ hiện lại nếu cần
+        hideTurnstileWidget();
+
         checkSessionSession();
 
         // Auth gate Enter key handlers
@@ -3259,14 +3263,6 @@
         const authUser = document.getElementById('authUsername');
         if (authPass) authPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthLogin(); });
         if (authUser) authUser.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthLogin(); });
-
-        if(isLocalhost) {
-            unlockRunButton("🚀 BẮT ĐẦU (Local)");
-            turnstileToken = "LOCAL_BYPASS";
-            hideTurnstileWidget();
-            document.getElementById('turnstileStatus').textContent = "Local";
-            document.getElementById('turnstileStatus').className = "turnstile-badge status-success";
-        }
     });
   </script>
 </body>
