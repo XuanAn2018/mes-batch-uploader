@@ -1582,6 +1582,12 @@
     let operationsList = []; // Lưu danh sách operation để sắp xếp
     let packageStatus = ''; // Lưu trạng thái package (CF/RO)
 
+    // BIẾN CHO BATCH PROCESS (chạy chính)
+    let batchResults = [];
+    let isPaused = false;
+    let isStopped = false;
+    let currentBatchStart = 0;
+
     // UI Elements
     const logEl = document.getElementById("log");
     const progressBar = document.getElementById("progressBar");
